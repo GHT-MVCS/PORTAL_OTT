@@ -262,6 +262,35 @@
             font-weight: bold;
             color: #1a73e8;
         }
+        /* RECORRIDO - Estilo de columnas */
+        .recorrido-item-grid {
+            display: grid;
+            grid-template-columns: 0.3fr 1fr 1fr 1.5fr 0.8fr;
+            gap: 8px;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            align-items: center;
+            text-align: center;
+        }
+        .recorrido-header {
+            display: grid;
+            grid-template-columns: 0.3fr 1fr 1fr 1.5fr 0.8fr;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #e8f0fe;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #1a73e8;
+            text-align: center;
+        }
+        .recorrido-col-hora {
+            font-weight: bold;
+            color: #1a73e8;
+        }
         
         .table-wrapper {
             overflow-x: auto;
@@ -520,9 +549,15 @@
                 <div><span id="subtotalServiciosCOND">0</span> servicios | <span id="subtotalPiezasCOND">0</span> piezas | <span id="subtotalFBECOND">0</span> FBE</div>
             </div>
             
-            <!-- CUADRO RECORRIDO -->
+                <!-- CUADRO RECORRIDO -->
             <div class="recorrido-card" id="recorridoCard">
                 <div class="recorrido-title">🗺️ RECORRIDO</div>
+                <div class="recorrido-header">
+                    <span>ORIGEN</span>
+                    <span>DESTINO</span>
+                    <span>RECORRIDO</span>
+                    <span>HORA</span>
+                </div>
                 <div id="recorridoItems" class="recorrido-items">Cargando...</div>
             </div>
             
@@ -857,6 +892,91 @@
             document.getElementById('filterFechaHastaOTT').value = '';
             aplicarFiltrosOTT();
         }
+
+        function actualizarDashboardOTT() {
+            const piezasIndex = headers.indexOf('# PIEZAS');
+            const fbeIndex = headers.indexOf('FBE');
+            const tarifaIndex = headers.indexOf('TARIFA');
+            const conductorUIndex = headers.indexOf('CONDUCTORU');
+            const vehiculoIndex = headers.indexOf('VEHICULO');
+            const facturarAIndex = headers.indexOf('FACTURAR A');
+            const conductorNombreIndex = headers.indexOf('CONDUCTOR');
+            
+            let totalServicios = ottFilteredData.length;
+            let totalPiezas = 0, totalFBE = 0, totalTarifa = 0;
+            ottFilteredData.forEach(row => {
+                totalPiezas += parseFloat(row[piezasIndex]) || 0;
+                totalFBE += parseFloat(row[fbeIndex]) || 0;
+                totalTarifa += parseFloat(row[tarifaIndex]) || 0;
+            });
+            
+            document.getElementById('totalServiciosOTT').innerText = formatNumber(totalServicios);
+            document.getElementById('totalPiezasOTT').innerText = formatNumber(totalPiezas);
+            document.getElementById('totalFBEOTT').innerText = formatNumber(totalFBE);
+            document.getElementById('totalTarifaOTT').innerText = '$ ' + formatNumber(totalTarifa);
+            document.getElementById('totalRegistrosOTT').innerHTML = `📊 ${formatNumber(totalServicios)} Servicios`;
+            document.getElementById('subtotalServiciosOTT').innerText = formatNumber(totalServicios);
+            document.getElementById('subtotalPiezasOTT').innerText = formatNumber(totalPiezas);
+            document.getElementById('subtotalFBEOTT').innerText = formatNumber(totalFBE);
+            document.getElementById('subtotalTarifaOTT').innerHTML = '$ ' + formatNumber(totalTarifa);
+            
+            if (aplicaImpuestos) {
+                const retencion = totalTarifa * 0.01;
+                const reteica = totalTarifa * 0.007;
+                document.getElementById('retencionValue').innerHTML = '$ ' + formatNumber(retencion);
+                document.getElementById('reteicaValue').innerHTML = '$ ' + formatNumber(reteica);
+            }
+            
+            const resConductor = {};
+            ottFilteredData.forEach(row => {
+                const keyU = row[conductorUIndex] || 'SIN ASIGNAR';
+                const nombreCompleto = row[conductorNombreIndex] || keyU;
+                if (!resConductor[keyU]) {
+                    resConductor[keyU] = { nombre: nombreCompleto, s: 0, p: 0, f: 0, t: 0 };
+                }
+                resConductor[keyU].s++;
+                resConductor[keyU].p += parseFloat(row[piezasIndex]) || 0;
+                resConductor[keyU].f += parseFloat(row[fbeIndex]) || 0;
+                resConductor[keyU].t += parseFloat(row[tarifaIndex]) || 0;
+            });
+            let htmlCond = '';
+            Object.values(resConductor).forEach(v => {
+                htmlCond += `<div class="resumen-card"><strong>${v.nombre}</strong><br>📋 ${formatNumber(v.s)} | 📦 ${formatNumber(v.p)} | ⚖️ ${formatNumber(v.f)} | 💰 $${formatNumber(v.t)}</div>`;
+            });
+            document.getElementById('resumenConductorOTT').innerHTML = htmlCond || '<div>Sin datos</div>';
+            
+            const resVehiculo = {};
+            ottFilteredData.forEach(row => {
+                const key = row[vehiculoIndex] || 'SIN ASIGNAR';
+                if (!resVehiculo[key]) resVehiculo[key] = { s: 0, p: 0, f: 0, t: 0 };
+                resVehiculo[key].s++;
+                resVehiculo[key].p += parseFloat(row[piezasIndex]) || 0;
+                resVehiculo[key].f += parseFloat(row[fbeIndex]) || 0;
+                resVehiculo[key].t += parseFloat(row[tarifaIndex]) || 0;
+            });
+            let htmlVeh = '';
+            Object.entries(resVehiculo).forEach(([k, v]) => {
+                htmlVeh += `<div class="resumen-card"><strong>${k}</strong><br>📋 ${formatNumber(v.s)} | 📦 ${formatNumber(v.p)} | ⚖️ ${formatNumber(v.f)} | 💰 $${formatNumber(v.t)}</div>`;
+            });
+            document.getElementById('resumenVehiculoOTT').innerHTML = htmlVeh || '<div>Sin datos</div>';
+            
+            const resFactura = {};
+            ottFilteredData.forEach(row => {
+                const key = row[facturarAIndex] || 'SIN ASIGNAR';
+                if (!resFactura[key]) resFactura[key] = { s: 0, p: 0, f: 0, t: 0 };
+                resFactura[key].s++;
+                resFactura[key].p += parseFloat(row[piezasIndex]) || 0;
+                resFactura[key].f += parseFloat(row[fbeIndex]) || 0;
+                resFactura[key].t += parseFloat(row[tarifaIndex]) || 0;
+            });
+            let htmlFact = '';
+            Object.entries(resFactura).forEach(([k, v]) => {
+                htmlFact += `<div class="resumen-card"><strong>${k}</strong><br>📋 ${formatNumber(v.s)} | 📦 ${formatNumber(v.p)} | ⚖️ ${formatNumber(v.f)} | 💰 $${formatNumber(v.t)}</div>`;
+            });
+            document.getElementById('resumenFacturarAOTT').innerHTML = htmlFact || '<div>Sin datos</div>';
+            
+            renderTableOTT(ottFilteredData);
+        }
         
         function actualizarDashboardCOND() {
             const piezasIndex = headers.indexOf('# PIEZAS');
@@ -905,34 +1025,104 @@
             }
             
             const idIndex = headers.indexOf('ID');
-            const columnsToShow = ['ID', 'ORIGEN', 'DESTINO', 'FACTURAR A', 'PRODUCTO', '# PIEZAS', 'FBE', 'FECHA E', 'CONDUCTOR', 'VEHICULO', 'ORDEN R', 'TARIFA', 'TIPO DE VIAJE', 'ESTADO DE VIAJE'];
-            const columnTitles = ['VER', 'ID', 'ORIGEN', 'DESTINO', 'FACTURAR A', 'PRODUCTO', '# PIEZAS', 'FBE', 'FECHA ENTREGA', 'CONDUCTOR', 'VEHICULO', 'ORDEN DE RECORRIDO', 'TARIFA', 'TIPO VIAJE', 'ESTADO'];
+            const origenIndex = headers.indexOf('ORIGEN');
+            const destinoIndex = headers.indexOf('DESTINO');
+            const facturarAIndex = headers.indexOf('FACTURAR A');
+            const productoIndex = headers.indexOf('PRODUCTO');
+            const piezasIndex = headers.indexOf('# PIEZAS');
+            const fbeIndex = headers.indexOf('FBE');
+            const fechaEIndex = headers.indexOf('FECHA E');
+            const conductorIndex = headers.indexOf('CONDUCTOR');
+            const vehiculoIndex = headers.indexOf('VEHICULO');
+            const ordenRIndex = headers.indexOf('ORDEN R');
+            const tarifaIndex = headers.indexOf('TARIFA');
+            const tipoViajeIndex = headers.indexOf('TIPO DE VIAJE');
+            const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
             
-            const indicesToShow = columnsToShow.map(col => headers.indexOf(col)).filter(idx => idx !== -1);
-            
-            let html = '<table><thead><tr>';
-            html += '<th style="background:#1a73e8; color:white; padding:12px; border:1px solid #ddd;">VER</th>';
-            html += '<th style="background:#1a73e8; color:white; padding:12px; border:1px solid #ddd;">ID</th>';
-            columnTitles.slice(2).forEach(title => {
-                html += `<th style="background:#1a73e8; color:white; padding:12px; border:1px solid #ddd;">${title}</th>`;
-            });
-            html += '</tr></thead><tbody>';
-            
-            data.forEach((row, rowIndex) => {
-                html += '<tr>';
-                html += `<td style="border:1px solid #ddd; padding:8px; text-align:center;"><button class="btn-ver" onclick="verDetalle(${rowIndex}, 'ott')">👁️ VER</button></td>`;
-                html += `<td style="border:1px solid #ddd; padding:8px;">${idIndex !== -1 ? (row[idIndex] || '-') : '-'}</td>`;
-                indicesToShow.forEach(idx => {
-                    let value = row[idx] || '-';
-                    if (headers[idx] === 'TARIFA' && value !== '-') {
-                        html += `<td style="border:1px solid #ddd; padding:8px; text-align:right;">$${formatNumber(parseFloat(value))}</td>`;
-                    } else {
-                        html += `<td style="border:1px solid #ddd; padding:8px;">${value}</td>`;
+            // Ordenar los datos por FECHA E (opcional)
+            if (fechaEIndex !== -1 && data.length > 0) {
+                data.sort((a, b) => {
+                    function fechaANumero(fechaStr) {
+                        if (!fechaStr) return 0;
+                        const partes = fechaStr.split('/');
+                        if (partes.length !== 3) return 0;
+                        return parseInt(partes[2] + partes[1] + partes[0]);
                     }
+                    return fechaANumero(a[fechaEIndex]) - fechaANumero(b[fechaEIndex]);
                 });
+            }
+            
+            let html = '<div style="overflow-x: auto; width: 100%;">';
+            html += '<table style="width: 100%; border-collapse: collapse; min-width: 1200px; font-size: 12px;">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">VER</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ID</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ORIGEN</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">DESTINO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">FACTURAR A</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">PRODUCTO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;"># PIEZAS</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">FBE</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">FECHA ENTREGA</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">CONDUCTOR</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">VEHICULO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ORDEN DE RECORRIDO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">TARIFA</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">TIPO VIAJE</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ESTADO</th>';
+            html += '</tr>';
+            html += '</thead><tbody>';
+            
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+                
+                const getVal = (idx) => {
+                    if (idx === -1) return '-';
+                    const val = row[idx];
+                    return (val !== undefined && val !== null && val.toString().trim() !== '') ? val : '-';
+                };
+                
+                const idValue = getVal(idIndex);
+                const origenValue = getVal(origenIndex);
+                const destinoValue = getVal(destinoIndex);
+                const facturarAValue = getVal(facturarAIndex);
+                const productoValue = getVal(productoIndex);
+                const piezasValue = getVal(piezasIndex);
+                const piezasNum = parseFloat(piezasValue) || 0;
+                const fbeValue = getVal(fbeIndex);
+                const fbeNum = parseFloat(fbeValue) || 0;
+                const fechaValue = getVal(fechaEIndex);
+                const conductorValue = getVal(conductorIndex);
+                const vehiculoValue = getVal(vehiculoIndex);
+                const ordenValue = getVal(ordenRIndex);
+                const tarifaValue = getVal(tarifaIndex);
+                const tarifaNum = parseFloat(tarifaValue) || 0;
+                const tipoViajeValue = getVal(tipoViajeIndex);
+                const estadoValue = getVal(estadoIndex);
+                
+                html += '<tr>';
+                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;"><button class="btn-ver" onclick="verDetalle(${i}, 'ott')">👁️ VER</button></td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${idValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${origenValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${destinoValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${facturarAValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${productoValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${formatNumber(piezasNum)}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${formatNumber(fbeNum)}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${fechaValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${conductorValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${vehiculoValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${ordenValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${formatNumber(tarifaNum)}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${tipoViajeValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${estadoValue}</td>`;
                 html += '</tr>';
-            });
+            }
+            
             html += '</tbody></table>';
+            html += '</div>';
+            
             container.innerHTML = html;
             window.ottDataModal = data;
         }
@@ -1030,7 +1220,7 @@
         function actualizarRecorrido(data) {
             const container = document.getElementById('recorridoItems');
             if (data.length === 0) {
-                container.innerHTML = '<div class="recorrido-item">No hay servicios para mostrar</div>';
+                container.innerHTML = '<div class="recorrido-item-grid">No hay servicios para mostrar</div>';
                 return;
             }
             
@@ -1039,23 +1229,20 @@
             const ordenRIndex = headers.indexOf('ORDEN R');
             const horaCIndex = headers.indexOf('HORA C');
             
-            // Crear array con ruta y hora
             const recorrido = [];
-            data.forEach(row => {
-                const origen = row[origenIndex] || '?';
-                const destino = row[destinoIndex] || '?';
-                const ordenR = row[ordenRIndex] || '';
-                // Usar ORDEN R si existe, si no usar ORIGEN-DESTINO
-                const ruta = ordenR || `${origen}-${destino}`;
+            data.forEach((row, idx) => {
+                const origen = row[origenIndex] || '-';
+                const destino = row[destinoIndex] || '-';
+                const ordenR = row[ordenRIndex] || '-';
                 const horaC = row[horaCIndex] || '--:--';
-                recorrido.push({ ruta, horaC, ordenR });
+                recorrido.push({ idx, origen, destino, ordenR, horaC });
             });
             
-            // Ordenar por hora de más temprano a más tarde
             recorrido.sort((a, b) => {
                 function horaAMinutos(horaStr) {
-                    if (!horaStr) return 0;
+                    if (!horaStr || horaStr === '--:--') return 9999;
                     const partes = horaStr.split(':');
+                    if (partes.length !== 2) return 9999;
                     return (parseInt(partes[0]) || 0) * 60 + (parseInt(partes[1]) || 0);
                 }
                 return horaAMinutos(a.horaC) - horaAMinutos(b.horaC);
@@ -1064,15 +1251,17 @@
             let html = '';
             recorrido.forEach(item => {
                 html += `
-                    <div class="recorrido-item">
-                        <span class="recorrido-ruta">${item.ruta}</span>
-                        <span class="recorrido-hora">⏰ ${item.horaC}</span>
+                    <div class="recorrido-item-grid">
+                        <button class="btn-ver" onclick="verDetalle(${item.idx}, 'conductor')">👁️</button>
+                        <span>${item.origen}</span>
+                        <span>${item.destino}</span>
+                        <span>${item.ordenR}</span>
+                        <span class="recorrido-col-hora">⏰ ${item.horaC}</span>
                     </div>
                 `;
             });
             container.innerHTML = html;
         }
-        
         function renderTableCOND(data) {
             const container = document.getElementById('tableContainerCOND');
             if (data.length === 0) {
@@ -1209,25 +1398,36 @@
             const row = data[rowIndex];
             const modalBody = document.getElementById('modalBody');
             
-            const camposImportantes = [
-                'ID', 'FECHA S', 'SOLICITANTE', 'ORIGEN', 'DESTINO', 'FACTURAR A', 'PRODUCTO', 
-                '# PIEZAS', 'FBE', 'PESO', 'FECHA E', 'HORA E', 'RECORRIDO', 'OPERACION', 'TIPO V', 
-                'OTT', 'CONDUCTOR', 'VEHICULO', 'ORDEN R', 'Zona Entrega', 'Contacto Entrega', 
-                'HORA C', 'HORA D', 'TARIFA', 'TIPO DE VIAJE', 'ESTADO DE VIAJE', 'OBSERVACIONES', 'CENTRO DE C'
+            // Columnas específicas para mostrar en el modal (igual que la tabla CONDUCTOR)
+            const columnasMostrar = [
+                { nombre: 'ID', label: 'ID' },
+                { nombre: 'FECHA E', label: 'FECHA ENTREGA' },
+                { nombre: 'ORIGEN', label: 'ORIGEN' },
+                { nombre: 'DESTINO', label: 'DESTINO' },
+                { nombre: 'PRODUCTO', label: 'PRODUCTO' },
+                { nombre: '# PIEZAS', label: 'PIEZAS' },
+                { nombre: 'FBE', label: 'FBE' },
+                { nombre: 'PESO', label: 'PESO' },
+                { nombre: 'VEHICULO', label: 'VEHICULO' },
+                { nombre: 'ORDEN R', label: 'ORDEN DE RECORRIDO' },
+                { nombre: 'Zona Entrega', label: 'ZONA ENTREGA' },
+                { nombre: 'Contacto Entrega', label: 'CONTACTO ENTREGA' },
+                { nombre: 'HORA C', label: 'HORA CARGUE' },
+                { nombre: 'HORA D', label: 'HORA DESCARGUE' },
+                { nombre: 'OBSERVACIONES', label: 'OBSERVACIONES' },
+                { nombre: 'ESTADO DE VIAJE', label: 'ESTADO' }
             ];
             
             let html = '';
-            camposImportantes.forEach(campo => {
-                const idx = headers.indexOf(campo);
-                if (idx !== -1 && row[idx] && row[idx].trim() !== '') {
-                    let label = campo;
-                    if (campo === 'FECHA E') label = 'FECHA ENTREGA';
-                    if (campo === 'ORDEN R') label = 'ORDEN DE RECORRIDO';
-                    if (campo === 'HORA C') label = 'HORA CARGUE';
-                    if (campo === 'HORA D') label = 'HORA DESCARGUE';
-                    if (campo === 'ESTADO DE VIAJE') label = 'ESTADO';
-                    if (campo === '# PIEZAS') label = 'PIEZAS';
-                    html += `<div class="modal-field"><div class="modal-field-label">${label}:</div><div class="modal-field-value">${row[idx]}</div></div>`;
+            columnasMostrar.forEach(col => {
+                const idx = headers.indexOf(col.nombre);
+                if (idx !== -1 && row[idx] && row[idx].toString().trim() !== '') {
+                    html += `
+                        <div class="modal-field">
+                            <div class="modal-field-label">${col.label}:</div>
+                            <div class="modal-field-value">${row[idx]}</div>
+                        </div>
+                    `;
                 }
             });
             
