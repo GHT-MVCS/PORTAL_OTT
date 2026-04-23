@@ -22,30 +22,31 @@
             padding: 35px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
         }
-        .login-panel h2 { color: #1a73e8; margin-bottom: 10px; text-align: center; }
-        .role-switch {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 22px;
-        }
-        .role-btn {
-            width: 100%;
-            border: 1px solid #d0d7e2;
-            background: #f6f8fb;
-            color: #30435f;
-            padding: 10px 12px;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .role-btn.active {
-            border-color: #1a73e8;
-            background: #e8f0fe;
+        
+        .login-panel h2 {
             color: #1a73e8;
+            margin-bottom: 10px;
+            text-align: center;
         }
-        .input-group { margin-bottom: 20px; }
-        .input-group label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
+        
+        .login-panel .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        
         .input-group input {
             width: 100%;
             padding: 12px;
@@ -72,6 +73,13 @@
             border-radius: 8px;
             margin-top: 15px;
             text-align: center;
+            font-size: 14px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
         }
         
         .dashboard-panel {
@@ -280,31 +288,29 @@
     <div class="container">
         <!-- Login Panel -->
         <div id="loginPanel" class="login-panel">
-            <div class="role-switch">
-                <button id="roleOtt" class="role-btn active" onclick="setRole('ott')">Interfaz OTT</button>
-                <button id="roleConductor" class="role-btn" onclick="setRole('conductor')">Interfaz Conductor</button>
-            </div>
-            <h2 id="loginTitle">🚛 Portal OTT</h2>
-            <div id="loginSubtitle" class="subtitle"></div>
+            <h2>🚛 Portal Logístico</h2>
+            <div class="subtitle">Ingrese sus credenciales de transportista</div>
+            
             <div class="input-group">
-                <label id="userLabel">Usuario OTT</label>
-                <input type="text" id="userInput" placeholder="Ej: JJ" autocomplete="off">
+                <label>Código OTT</label>
+                <input type="text" id="ottInput" placeholder="Ej: MA, RZ, TL, OM" autocomplete="off">
             </div>
             <div class="input-group">
                 <label>Contraseña</label>
                 <input type="password" id="passwordInput" placeholder="••••••">
             </div>
-            <button id="loginButton" onclick="login()">🔐 Acceder como OTT</button>
+            
+            <button onclick="login()">🔐 Acceder al Portal</button>
             <div id="loginError" class="error-msg" style="display:none;"></div>
+            <div class="hint">Credenciales leídas desde la hoja: gid 1400391866, usuario en columna K y contraseña en columna L</div>
         </div>
         
         <!-- Dashboard Panel OTT -->
         <div id="dashboardPanelOTT" class="dashboard-panel" style="display:none;">
             <div class="header">
-                <h2>🚚 Portal de OTT</h2>
+                <h2>🚚 Portal de Transporte</h2>
                 <div class="user-info">
-                    <span id="userDisplayOTT"></span>
-                    <span id="totalRegistrosOTT"></span>
+                    <span id="ottDisplay"></span>
                     <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
                 </div>
             </div>
@@ -439,44 +445,14 @@
 
     <script>
         // URLs de tus hojas publicadas
-        const DATOS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=161433051&output=csv';
-        const USUARIOS_OTT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=1481764869&output=csv';
-        const USUARIOS_CONDUCTOR_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=1400391866&output=csv';
+        const DATOS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?output=csv';
+        const USUARIOS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=1481764869&output=csv';
         
         let allData = [];
         let headers = [];
-        let currentUser = '';
-        let currentRole = 'ott';
-        let aplicaImpuestos = false;
+        let currentOTT = '';
         
-        let ottData = [];
-        let conductorData = [];
-        
-        let ottFilteredData = [];
-        let conductorFilteredData = [];
-        
-        const hoy = new Date().toISOString().split('T')[0];
-        
-        function formatNumber(num) {
-            if (num === undefined || num === null) return '0';
-            return Number(num).toLocaleString('es-CO');
-        }
-
-        function setRole(role) {
-            currentRole = role;
-            const isOtt = role === 'ott';
-            document.getElementById('roleOtt').classList.toggle('active', isOtt);
-            document.getElementById('roleConductor').classList.toggle('active', !isOtt);
-            document.getElementById('loginTitle').innerText = isOtt ? '🚛 Portal OTT' : '🧑‍✈️ Portal Conductor';
-            document.getElementById('loginSubtitle').innerText = '';
-            document.getElementById('userLabel').innerText = isOtt ? 'Usuario OTT' : 'Usuario Conductor';
-            document.getElementById('userInput').placeholder = isOtt ? 'Ej: MA, RZ, TL' : 'Ej: ANDRESR';
-            document.getElementById('loginButton').innerText = isOtt ? '🔐 Acceder como OTT' : '🔐 Acceder como Conductor';
-            document.getElementById('userInput').value = '';
-            document.getElementById('passwordInput').value = '';
-            document.getElementById('loginError').style.display = 'none';
-        }
-
+        // Función para parsear CSV (maneja comillas y comas)
         function parseCSV(csvText) {
             const rows = [];
             const lines = csvText.split(/\r?\n/);
@@ -501,19 +477,18 @@
             }
             return rows;
         }
-
-        async function loadUsuariosOTT() {
+        
+        // Función para cargar y validar usuarios
+        async function loadUsuarios() {
             try {
                 const response = await fetch(USUARIOS_OTT_URL);
                 const csvText = await response.text();
                 const data = parseCSV(csvText);
                 const usuarios = {};
+                // Asumiendo que la primera fila son encabezados: SIGLA, CONTRASEÑA
                 for (let i = 1; i < data.length; i++) {
-                    const usuario = data[i][0] ? data[i][0].trim().toUpperCase() : '';
-                    const password = data[i][1] ? data[i][1].trim() : '';
-                    const aplica = data[i][2] ? data[i][2].trim().toUpperCase() : 'NO';
-                    if (usuario && password) {
-                        usuarios[usuario] = { password: password, aplicaImpuestos: aplica === 'SI' || aplica === 'SÍ' };
+                    if (data[i][0] && data[i][1]) {
+                        usuarios[data[i][0].trim().toUpperCase()] = data[i][1].trim();
                     }
                 }
                 return usuarios;
@@ -555,13 +530,14 @@
         }
         
         async function login() {
-            const username = document.getElementById('userInput').value.trim().toUpperCase();
+            const ott = document.getElementById('ottInput').value.trim().toUpperCase();
             const password = document.getElementById('passwordInput').value;
             const errorDiv = document.getElementById('loginError');
+            const roleLabel = currentRole === 'ott' ? 'OTT' : 'Conductor';
             
             if (!username || !password) {
                 errorDiv.style.display = 'block';
-                errorDiv.innerText = '❌ Ingrese usuario y contraseña';
+                errorDiv.innerText = '❌ Por favor ingrese su código OTT y contraseña';
                 return;
             }
             
@@ -570,21 +546,10 @@
             errorDiv.style.background = '#e3f2fd';
             errorDiv.style.color = '#1976d2';
             
-            let loginOk = false;
+            // Cargar usuarios y validar
+            const usuarios = await loadUsuarios();
             
-            if (currentRole === 'ott') {
-                const usuarios = await loadUsuariosOTT();
-                if (usuarios[username] && usuarios[username].password === password) {
-                    loginOk = true;
-                    aplicaImpuestos = usuarios[username].aplicaImpuestos;
-                }
-            } else {
-                const usuarios = await loadUsuariosConductor();
-                if (usuarios[username] && usuarios[username] === password) loginOk = true;
-                aplicaImpuestos = false;
-            }
-            
-            if (!loginOk) {
+            if (!usuarios[ott] || usuarios[ott] !== password) {
                 errorDiv.style.display = 'block';
                 errorDiv.innerText = '❌ Usuario o contraseña incorrectos';
                 errorDiv.style.background = '#fee';
@@ -592,115 +557,51 @@
                 return;
             }
             
-            currentUser = username;
+            // Login exitoso
+            currentOTT = ott;
             errorDiv.style.display = 'none';
+            
+            // Cargar y mostrar datos
+            await loadAndDisplayData(ott);
+            
+            // Mostrar dashboard
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('dashboardPanel').style.display = 'block';
+            document.getElementById('ottDisplay').innerText = ott;
+        }
+        
+        // Cargar y filtrar datos por OTT
+        async function loadAndDisplayData(ott) {
+            const container = document.getElementById('tableContainer');
+            container.innerHTML = '<div class="loading">⏳ Cargando servicios...</div>';
             
             const { headers: allHeaders, rows } = await loadDatos();
             headers = allHeaders;
             
-            const ottIndex = headers.indexOf('OTT');
-            const conductorUIndex = headers.indexOf('CONDUCTORU');
-            const conductorNombreIndex = headers.indexOf('CONDUCTOR');
-            
-            if (currentRole === 'ott') {
-                if (ottIndex === -1) {
-                    alert('No se encontró columna OTT');
-                    return;
-                }
-                ottData = rows.filter(row => (row[ottIndex] || '').trim().toUpperCase() === username);
-                
-                if (ottData.length === 0) {
-                    alert(`No hay servicios para la OTT ${username}`);
-                    return;
-                }
-                
-                cargarListasOTT();
-                document.getElementById('filterFechaDesdeOTT').value = '';
-                document.getElementById('filterFechaHastaOTT').value = '';
-                
-                const impuestosSection = document.getElementById('impuestosSection');
-                if (aplicaImpuestos) {
-                    impuestosSection.style.display = 'block';
-                } else {
-                    impuestosSection.style.display = 'none';
-                }
-                
-                aplicarFiltrosOTT();
-                
-                document.getElementById('loginPanel').style.display = 'none';
-                document.getElementById('dashboardPanelOTT').style.display = 'block';
-                document.getElementById('userDisplayOTT').innerText = `OTT: ${username}`;
-                
-            } else {
-                if (conductorUIndex === -1) {
-                    alert('No se encontró columna CONDUCTORU');
-                    return;
-                }
-                conductorData = rows.filter(row => (row[conductorUIndex] || '').trim().toUpperCase() === username);
-                
-                if (conductorData.length === 0) {
-                    alert(`No hay servicios para el conductor ${username}`);
-                    return;
-                }
-                
-                const nombreCompleto = conductorData[0][conductorNombreIndex] || username;
-                
-                cargarListasCOND();
-                document.getElementById('filterFechaDesdeCOND').value = hoy;
-                document.getElementById('filterFechaHastaCOND').value = hoy;
-                aplicarFiltrosCOND();
-                
-                document.getElementById('loginPanel').style.display = 'none';
-                document.getElementById('dashboardPanelCONDUCTOR').style.display = 'block';
-                document.getElementById('userDisplayCOND').innerText = `Conductor: ${nombreCompleto}`;
+            if (rows.length === 0) {
+                container.innerHTML = '<div class="loading">⚠️ No hay datos disponibles</div>';
+                return;
             }
-        }
-        
-        // ==================== FUNCIONES OTT ====================
-        function cargarListasOTT() {
-            const conductorUIndex = headers.indexOf('CONDUCTORU');
-            const vehiculoIndex = headers.indexOf('VEHICULO');
-            const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
             
-            const conductores = [...new Set(ottData.map(row => row[conductorUIndex]).filter(v => v && v.trim()))].sort();
-            const selectConductor = document.getElementById('filterConductorOTT');
-            selectConductor.innerHTML = '<option value="">-- Todos --</option>';
-            conductores.forEach(c => {
-                selectConductor.innerHTML += `<option value="${c}">${c}</option>`;
+            // Encontrar el índice de la columna OTT
+            const ottIndex = headers.indexOf('OTT');
+            
+            if (ottIndex === -1) {
+                container.innerHTML = '<div class="loading">⚠️ No se encontró la columna OTT en los datos</div>';
+                return;
+            }
+            
+            // Filtrar filas por OTT
+            allData = rows.filter(row => {
+                return row[ottIndex] && row[ottIndex].trim().toUpperCase() === ott;
             });
             
-            const vehiculos = [...new Set(ottData.map(row => row[vehiculoIndex]).filter(v => v && v.trim()))].sort();
-            const selectVehiculo = document.getElementById('filterVehiculoOTT');
-            selectVehiculo.innerHTML = '<option value="">-- Todos --</option>';
-            vehiculos.forEach(v => {
-                selectVehiculo.innerHTML += `<option value="${v}">${v}</option>`;
-            });
-            
-            const estados = [...new Set(ottData.map(row => row[estadoIndex]).filter(v => v && v.trim()))].sort();
-            const selectEstado = document.getElementById('filterEstadoOTT');
-            selectEstado.innerHTML = '<option value="">-- Todos --</option>';
-            estados.forEach(e => {
-                selectEstado.innerHTML += `<option value="${e}">${e}</option>`;
-            });
-        }
-        
-        function aplicarFiltrosOTT() {
-            const conductorFiltro = document.getElementById('filterConductorOTT').value;
-            const vehiculoFiltro = document.getElementById('filterVehiculoOTT').value;
-            const estadoFiltro = document.getElementById('filterEstadoOTT').value;
-            const fechaDesde = document.getElementById('filterFechaDesdeOTT').value;
-            const fechaHasta = document.getElementById('filterFechaHastaOTT').value;
-            
-            const conductorUIndex = headers.indexOf('CONDUCTORU');
-            const vehiculoIndex = headers.indexOf('VEHICULO');
-            const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
-            const fechaIndex = headers.indexOf('FECHA E');
-            
-            function convertirFechaANumero(fecha) {
-                if (!fecha) return 0;
-                const partes = fecha.split('-');
-                if (partes.length !== 3) return 0;
-                return parseInt(partes[0] + partes[1] + partes[2]);
+            if (allData.length === 0) {
+                container.innerHTML = `<div class="loading">⚠️ No hay servicios asignados para la OTT ${ott}</div>`;
+                document.getElementById('totalServicios').innerText = '0';
+                document.getElementById('totalPiezas').innerText = '0';
+                document.getElementById('totalPeso').innerText = '0';
+                return;
             }
             
             function fechaSheetANumero(fechaSheet) {
@@ -853,141 +754,50 @@
             container.innerHTML = html;
         }
         
-        // ==================== FUNCIONES CONDUCTOR ====================
-        function cargarListasCOND() {
-            const vehiculoIndex = headers.indexOf('VEHICULO');
-            const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
-            
-            const vehiculos = [...new Set(conductorData.map(row => row[vehiculoIndex]).filter(v => v && v.trim()))].sort();
-            const selectVehiculo = document.getElementById('filterVehiculoCOND');
-            selectVehiculo.innerHTML = '<option value="">-- Todos --</option>';
-            vehiculos.forEach(v => {
-                selectVehiculo.innerHTML += `<option value="${v}">${v}</option>`;
-            });
-            
-            const estados = [...new Set(conductorData.map(row => row[estadoIndex]).filter(v => v && v.trim()))].sort();
-            const selectEstado = document.getElementById('filterEstadoCOND');
-            selectEstado.innerHTML = '<option value="">-- Todos --</option>';
-            estados.forEach(e => {
-                selectEstado.innerHTML += `<option value="${e}">${e}</option>`;
-            });
-        }
-        
-        function aplicarFiltrosCOND() {
-            const vehiculoFiltro = document.getElementById('filterVehiculoCOND').value;
-            const estadoFiltro = document.getElementById('filterEstadoCOND').value;
-            const fechaDesde = document.getElementById('filterFechaDesdeCOND').value;
-            const fechaHasta = document.getElementById('filterFechaHastaCOND').value;
-            
-            const vehiculoIndex = headers.indexOf('VEHICULO');
-            const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
-            const fechaIndex = headers.indexOf('FECHA E');
-            
-            function convertirFechaANumero(fecha) {
-                if (!fecha) return 0;
-                const partes = fecha.split('-');
-                if (partes.length !== 3) return 0;
-                return parseInt(partes[0] + partes[1] + partes[2]);
+        // Función para filtrar tabla
+        function filterTable() {
+            if (allData.length > 0) {
+                renderTable(allData);
             }
-            
-            function fechaSheetANumero(fechaSheet) {
-                if (!fechaSheet || fechaSheet.length < 10) return 0;
-                const partes = fechaSheet.split('/');
-                if (partes.length !== 3) return 0;
-                return parseInt(partes[2] + partes[1] + partes[0]);
-            }
-            
-            conductorFilteredData = conductorData.filter(row => {
-                if (vehiculoFiltro && row[vehiculoIndex] !== vehiculoFiltro) return false;
-                if (estadoFiltro && row[estadoIndex] !== estadoFiltro) return false;
-                
-                const fechaRowNum = fechaSheetANumero(row[fechaIndex]);
-                if (fechaDesde && fechaRowNum < convertirFechaANumero(fechaDesde)) return false;
-                if (fechaHasta && fechaRowNum > convertirFechaANumero(fechaHasta)) return false;
-                return true;
-            });
-            
-            actualizarDashboardCOND();
         }
         
-        function limpiarFiltrosCOND() {
-            document.getElementById('filterVehiculoCOND').value = '';
-            document.getElementById('filterEstadoCOND').value = '';
-            document.getElementById('filterFechaDesdeCOND').value = hoy;
-            document.getElementById('filterFechaHastaCOND').value = hoy;
-            aplicarFiltrosCOND();
-        }
-        
-        function actualizarDashboardCOND() {
-            const piezasIndex = headers.indexOf('# PIEZAS');
-            const fbeIndex = headers.indexOf('FBE');
+        // Exportar a CSV
+        function exportToCSV() {
+            if (allData.length === 0) return;
             
-            let totalServicios = conductorFilteredData.length;
-            let totalPiezas = 0, totalFBE = 0;
-            
-            conductorFilteredData.forEach(row => {
-                totalPiezas += parseFloat(row[piezasIndex]) || 0;
-                totalFBE += parseFloat(row[fbeIndex]) || 0;
-            });
-            
-            document.getElementById('totalServiciosCOND').innerText = formatNumber(totalServicios);
-            document.getElementById('totalCarguesCOND').innerText = formatNumber(totalServicios);
-            document.getElementById('totalPiezasCOND').innerText = formatNumber(totalPiezas);
-            document.getElementById('totalFBECOND').innerText = formatNumber(totalFBE);
-            document.getElementById('totalRegistrosCOND').innerHTML = `📊 ${formatNumber(totalServicios)} Servicios`;
-            document.getElementById('subtotalServiciosCOND').innerText = formatNumber(totalServicios);
-            document.getElementById('subtotalPiezasCOND').innerText = formatNumber(totalPiezas);
-            document.getElementById('subtotalFBECOND').innerText = formatNumber(totalFBE);
-            
-            renderTableCOND(conductorFilteredData);
-        }
-        
-        function renderTableCOND(data) {
-            const container = document.getElementById('tableContainerCOND');
-            if (data.length === 0) {
-                container.innerHTML = '<div class="loading">🔍 No hay servicios que coincidan con los filtros</div>';
-                return;
-            }
-            
-            const columnsToShow = ['FECHA E', 'ORIGEN', 'DESTINO', 'PRODUCTO', '# PIEZAS', 'FBE', 'PESO', 'VEHICULO', 'ORDEN R', 'Zona Entrega', 'Contacto Entrega', 'HORA C', 'HORA D', 'ESTADO DE VIAJE'];
-            const columnTitles = ['FECHA ENTREGA', 'ORIGEN', 'DESTINO', 'PRODUCTO', 'PIEZAS', 'FBE', 'PESO', 'VEHICULO', 'ORDEN DE RECORRIDO', 'ZONA ENTREGA', 'CONTACTO ENTREGA', 'HORA CARGUE', 'HORA DESCARGUE', 'ESTADO'];
-            
-            const indicesToShow = columnsToShow.map(col => headers.indexOf(col)).filter(idx => idx !== -1);
-            const titlesToShow = columnTitles.filter((_, i) => indicesToShow[i] !== -1);
-            
-            let html = '<div style="overflow-x: auto; width: 100%;">';
-            html += '<table style="width: 100%; border-collapse: collapse; min-width: 1200px; font-size: 12px;">';
-            html += '<thead><tr>';
-            titlesToShow.forEach(title => {
-                html += `<th style="background: #1a73e8; color: white; padding: 10px 8px; text-align: center; border: 1px solid #ddd; white-space: nowrap;">${title}</th>`;
-            });
-            html += '</tr></thead><tbody>';
-            
-            data.forEach(row => {
-                html += '<tr>';
-                indicesToShow.forEach(idx => {
-                    let value = row[idx] || '-';
-                    html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top;">${value}</td>`;
+            let csvContent = headers.join(',') + '\n';
+            allData.forEach(row => {
+                const escapedRow = row.map(cell => {
+                    if (cell && (cell.includes(',') || cell.includes('"'))) {
+                        return `"${cell.replace(/"/g, '""')}"`;
+                    }
+                    return cell || '';
                 });
-                html += '</tr>';
+                csvContent += escapedRow.join(',') + '\n';
             });
-            html += '</tbody></table></div>';
             
-            container.innerHTML = html;
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.setAttribute('download', `servicios_${currentOTT}_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
         
+        // Logout
         function logout() {
             document.getElementById('loginPanel').style.display = 'block';
-            document.getElementById('dashboardPanelOTT').style.display = 'none';
-            document.getElementById('dashboardPanelCONDUCTOR').style.display = 'none';
-            document.getElementById('userInput').value = '';
+            document.getElementById('dashboardPanel').style.display = 'none';
+            document.getElementById('ottInput').value = '';
             document.getElementById('passwordInput').value = '';
+            document.getElementById('filterConductor').value = '';
+            document.getElementById('filterFecha').value = '';
+            document.getElementById('filterEstado').value = '';
+            allData = [];
         }
-        
-        document.getElementById('userInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') login(); });
-        document.getElementById('passwordInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') login(); });
-        
-        setRole('ott');
     </script>
 </body>
 </html>
