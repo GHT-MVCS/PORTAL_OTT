@@ -13,7 +13,7 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(130deg, #0f172a 0%, #0b5c5f 45%, #f59e0b 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -37,6 +37,32 @@
             color: #1a73e8;
             margin-bottom: 10px;
             text-align: center;
+        }
+
+        .role-switch {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 22px;
+        }
+
+        .role-btn {
+            width: 100%;
+            border: 1px solid #d0d7e2;
+            background: #f6f8fb;
+            color: #30435f;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .role-btn.active {
+            border-color: #1a73e8;
+            background: #e8f0fe;
+            color: #1a73e8;
+            box-shadow: 0 4px 10px rgba(26, 115, 232, 0.2);
         }
         
         .login-panel .subtitle {
@@ -96,6 +122,13 @@
             margin-top: 15px;
             text-align: center;
             font-size: 14px;
+        }
+
+        .hint {
+            margin-top: 12px;
+            color: #5f6f84;
+            font-size: 12px;
+            text-align: center;
         }
         
         .loading {
@@ -268,12 +301,17 @@
     <div class="container">
         <!-- Login Panel -->
         <div id="loginPanel" class="login-panel">
-            <h2>🚛 Portal Logístico</h2>
-            <div class="subtitle">Ingrese sus credenciales de transportista</div>
+            <div class="role-switch">
+                <button id="roleOtt" class="role-btn active" onclick="setRole('ott')">Interfaz OTT</button>
+                <button id="roleConductor" class="role-btn" onclick="setRole('conductor')">Interfaz Conductor</button>
+            </div>
+
+            <h2 id="loginTitle">🚛 Portal OTT</h2>
+            <div id="loginSubtitle" class="subtitle">INICIAR SESIÓN OTT</div>
             
             <div class="input-group">
-                <label>Código OTT</label>
-                <input type="text" id="ottInput" placeholder="Ej: MA, RZ, TL, OM" autocomplete="off">
+                <label id="userLabel">Usuario OTT</label>
+                <input type="text" id="userInput" placeholder="Ej: MA, RZ, TL, OM" autocomplete="off">
             </div>
             
             <div class="input-group">
@@ -281,16 +319,17 @@
                 <input type="password" id="passwordInput" placeholder="••••••">
             </div>
             
-            <button onclick="login()">🔐 Acceder al Portal</button>
+            <button id="loginButton" onclick="login()">🔐 Acceder como OTT</button>
             <div id="loginError" class="error-msg" style="display:none;"></div>
+            <div class="hint">Credenciales leídas desde la hoja: gid 1400391866, usuario en columna K y contraseña en columna L</div>
         </div>
         
         <!-- Dashboard Panel (oculto inicialmente) -->
         <div id="dashboardPanel" class="dashboard-panel" style="display:none;">
             <div class="header">
-                <h2>🚚 Portal de Transporte</h2>
+                <h2 id="dashboardTitle">🚚 Portal de OTT</h2>
                 <div class="user-info">
-                    <span id="ottDisplay"></span>
+                    <span id="userDisplay"></span>
                     <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
                 </div>
             </div>
@@ -331,11 +370,36 @@
     <script>
         // URLs de tus hojas publicadas
         const DATOS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?output=csv';
-        const USUARIOS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=1481764869&output=csv';
+        const USUARIOS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=1400391866&output=csv';
         
         let allData = [];
         let headers = [];
-        let currentOTT = '';
+        let currentUser = '';
+        let currentRole = 'ott';
+
+        function getColumnIndex(columnLetter) {
+            return columnLetter.toUpperCase().charCodeAt(0) - 65;
+        }
+
+        function normalizeValue(value) {
+            return (value || '').trim();
+        }
+
+        function setRole(role) {
+            currentRole = role;
+
+            const isOtt = role === 'ott';
+            document.getElementById('roleOtt').classList.toggle('active', isOtt);
+            document.getElementById('roleConductor').classList.toggle('active', !isOtt);
+            document.getElementById('loginTitle').innerText = isOtt ? '🚛 Portal OTT' : '🧑‍✈️ Portal Conductor';
+            document.getElementById('loginSubtitle').innerText = isOtt ? 'INICIAR SESIÓN OTT' : 'INICIAR SESIÓN CONDUCTOR';
+            document.getElementById('userLabel').innerText = isOtt ? 'Usuario OTT' : 'Usuario Conductor';
+            document.getElementById('userInput').placeholder = isOtt ? 'Ej: MA, RZ, TL, OM' : 'Ej: NOMBRE O CÓDIGO CONDUCTOR';
+            document.getElementById('loginButton').innerText = isOtt ? '🔐 Acceder como OTT' : '🔐 Acceder como Conductor';
+            document.getElementById('loginError').style.display = 'none';
+            document.getElementById('userInput').value = '';
+            document.getElementById('passwordInput').value = '';
+        }
         
         // Función para parsear CSV (maneja comillas y comas)
         function parseCSV(csvText) {
@@ -368,7 +432,7 @@
             return rows;
         }
         
-        // Función para cargar y validar usuarios
+        // Función para cargar y validar usuarios desde K y L
         async function loadUsuarios() {
             try {
                 const response = await fetch(USUARIOS_URL);
@@ -378,10 +442,16 @@
                 if (data.length === 0) return {};
                 
                 const usuarios = {};
-                // Asumiendo que la primera fila son encabezados: SIGLA, CONTRASEÑA
+                const usuarioIndex = getColumnIndex('K');
+                const passwordIndex = getColumnIndex('L');
+
+                // Empieza desde fila 2 (índice 1)
                 for (let i = 1; i < data.length; i++) {
-                    if (data[i][0] && data[i][1]) {
-                        usuarios[data[i][0].trim().toUpperCase()] = data[i][1].trim();
+                    const usuario = normalizeValue(data[i][usuarioIndex]);
+                    const password = normalizeValue(data[i][passwordIndex]);
+
+                    if (usuario && password) {
+                        usuarios[usuario.toUpperCase()] = password;
                     }
                 }
                 return usuarios;
@@ -412,13 +482,15 @@
         
         // Login
         async function login() {
-            const ott = document.getElementById('ottInput').value.trim().toUpperCase();
+            const username = document.getElementById('userInput').value.trim();
+            const usernameKey = username.toUpperCase();
             const password = document.getElementById('passwordInput').value;
             const errorDiv = document.getElementById('loginError');
+            const roleLabel = currentRole === 'ott' ? 'OTT' : 'Conductor';
             
-            if (!ott || !password) {
+            if (!username || !password) {
                 errorDiv.style.display = 'block';
-                errorDiv.innerText = '❌ Por favor ingrese su código OTT y contraseña';
+                errorDiv.innerText = `❌ Ingrese usuario y contraseña de ${roleLabel}`;
                 return;
             }
             
@@ -430,29 +502,30 @@
             // Cargar usuarios y validar
             const usuarios = await loadUsuarios();
             
-            if (!usuarios[ott] || usuarios[ott] !== password) {
+            if (!usuarios[usernameKey] || usuarios[usernameKey] !== password) {
                 errorDiv.style.display = 'block';
-                errorDiv.innerText = '❌ Código OTT o contraseña incorrectos';
+                errorDiv.innerText = '❌ Usuario o contraseña incorrectos';
                 errorDiv.style.background = '#fee';
                 errorDiv.style.color = '#c33';
                 return;
             }
             
             // Login exitoso
-            currentOTT = ott;
+            currentUser = username;
             errorDiv.style.display = 'none';
             
             // Cargar y mostrar datos
-            await loadAndDisplayData(ott);
+            await loadAndDisplayData(currentUser, currentRole);
             
             // Mostrar dashboard
             document.getElementById('loginPanel').style.display = 'none';
             document.getElementById('dashboardPanel').style.display = 'block';
-            document.getElementById('ottDisplay').innerText = ott;
+            document.getElementById('dashboardTitle').innerText = currentRole === 'ott' ? '🚚 Portal de OTT' : '🛣️ Portal de Conductor';
+            document.getElementById('userDisplay').innerText = currentRole === 'ott' ? `OTT: ${currentUser}` : `Conductor: ${currentUser}`;
         }
         
-        // Cargar y filtrar datos por OTT
-        async function loadAndDisplayData(ott) {
+        // Cargar y filtrar datos según el perfil
+        async function loadAndDisplayData(username, role) {
             const container = document.getElementById('tableContainer');
             container.innerHTML = '<div class="loading">⏳ Cargando servicios...</div>';
             
@@ -464,21 +537,33 @@
                 return;
             }
             
-            // Encontrar el índice de la columna OTT
             const ottIndex = headers.indexOf('OTT');
+            const conductorIndex = headers.indexOf('CONDUCTOR');
             
-            if (ottIndex === -1) {
+            if (role === 'ott' && ottIndex === -1) {
                 container.innerHTML = '<div class="loading">⚠️ No se encontró la columna OTT en los datos</div>';
                 return;
             }
+
+            if (role === 'conductor' && conductorIndex === -1) {
+                container.innerHTML = '<div class="loading">⚠️ No se encontró la columna CONDUCTOR en los datos</div>';
+                return;
+            }
             
-            // Filtrar filas por OTT
+            const normalizedUser = username.trim().toUpperCase();
+
             allData = rows.filter(row => {
-                return row[ottIndex] && row[ottIndex].trim().toUpperCase() === ott;
+                if (role === 'ott') {
+                    return row[ottIndex] && row[ottIndex].trim().toUpperCase() === normalizedUser;
+                }
+
+                const conductorValue = (row[conductorIndex] || '').trim().toUpperCase();
+                return conductorValue === normalizedUser || conductorValue.includes(normalizedUser);
             });
             
             if (allData.length === 0) {
-                container.innerHTML = `<div class="loading">⚠️ No hay servicios asignados para la OTT ${ott}</div>`;
+                const roleText = role === 'ott' ? `la OTT ${username}` : `el conductor ${username}`;
+                container.innerHTML = `<div class="loading">⚠️ No hay servicios asignados para ${roleText}</div>`;
                 document.getElementById('totalServicios').innerText = '0';
                 document.getElementById('totalPiezas').innerText = '0';
                 document.getElementById('totalPeso').innerText = '0';
@@ -627,7 +712,7 @@
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             link.href = url;
-            link.setAttribute('download', `servicios_${currentOTT}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute('download', `servicios_${currentRole}_${currentUser}_${new Date().toISOString().split('T')[0]}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -638,13 +723,26 @@
         function logout() {
             document.getElementById('loginPanel').style.display = 'block';
             document.getElementById('dashboardPanel').style.display = 'none';
-            document.getElementById('ottInput').value = '';
+            document.getElementById('userInput').value = '';
             document.getElementById('passwordInput').value = '';
             document.getElementById('filterConductor').value = '';
             document.getElementById('filterFecha').value = '';
             document.getElementById('filterEstado').value = '';
             allData = [];
+            currentUser = '';
+            setRole(currentRole);
         }
+
+        document.getElementById('userInput').addEventListener('keydown', function(event) {
+            
+            if (event.key === 'Enter') login();
+        });
+
+        document.getElementById('passwordInput').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') login();
+        });
+
+        setRole('ott');
     </script>
 </body>
 </html>
