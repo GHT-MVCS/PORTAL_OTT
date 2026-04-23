@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Portal Logístico | GHT-MVCS</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -144,13 +144,8 @@
             gap: 8px;
             align-items: center;
         }
-        .date-range input {
-            flex: 1;
-        }
-        .filter-buttons {
-            display: flex;
-            gap: 8px;
-        }
+        .date-range input { flex: 1; }
+        .filter-buttons { display: flex; gap: 8px; }
         .filter-buttons button {
             width: auto;
             padding: 8px 20px;
@@ -175,7 +170,6 @@
         .stat-card h4 { font-size: 14px; opacity: 0.9; margin-bottom: 10px; }
         .stat-card .number { font-size: 28px; font-weight: bold; }
         
-        /* IMPUESTOS - OPCIÓN B (Tarjeta unificada color morado) */
         .impuestos-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 10px;
@@ -200,22 +194,9 @@
             flex-wrap: wrap;
             gap: 30px;
         }
-        .impuesto-item {
-            text-align: center;
-            flex: 1;
-            min-width: 180px;
-        }
-        .impuesto-label {
-            font-size: 14px;
-            color: rgba(255,255,255,0.9);
-            margin-bottom: 10px;
-            font-weight: 500;
-        }
-        .impuesto-value {
-            font-size: 28px;
-            font-weight: bold;
-            color: white;
-        }
+        .impuesto-item { text-align: center; flex: 1; min-width: 180px; }
+        .impuesto-label { font-size: 14px; color: rgba(255,255,255,0.9); margin-bottom: 10px; font-weight: 500; }
+        .impuesto-value { font-size: 28px; font-weight: bold; color: white; }
         
         .subtotal-despacho {
             background: #e8f0fe;
@@ -267,18 +248,86 @@
         tr:hover { background: #f5f5f5; }
         .loading { text-align: center; padding: 20px; color: #666; }
         
+        .btn-ver {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .btn-ver:hover { background: #1557b0; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            overflow-y: auto;
+        }
+        .modal-content {
+            background: white;
+            margin: 20px auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 15px;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            right: 20px;
+            top: 10px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #666;
+        }
+        .modal-close:hover { color: #c33; }
+        .modal-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1a73e8;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #1a73e8;
+        }
+        .modal-field {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .modal-field-label {
+            font-weight: bold;
+            width: 40%;
+            color: #555;
+        }
+        .modal-field-value {
+            width: 60%;
+            color: #333;
+        }
+        
         @media (max-width: 768px) {
             th, td { font-size: 10px; padding: 6px; }
             .filters-row { flex-direction: column; }
             .filter-item { min-width: 100%; }
             .date-range { flex-direction: column; }
             .impuesto-card-unificado { flex-direction: column; gap: 15px; }
+            .modal-content { width: 95%; margin: 10px auto; }
+            .modal-field-label { width: 35%; font-size: 12px; }
+            .modal-field-value { width: 65%; font-size: 12px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Login Panel -->
         <div id="loginPanel" class="login-panel">
             <div class="role-switch">
                 <button id="roleOtt" class="role-btn active" onclick="setRole('ott')">Interfaz OTT</button>
@@ -298,7 +347,6 @@
             <div id="loginError" class="error-msg" style="display:none;"></div>
         </div>
         
-        <!-- Dashboard Panel OTT -->
         <div id="dashboardPanelOTT" class="dashboard-panel" style="display:none;">
             <div class="header">
                 <h2>🚚 Portal de OTT</h2>
@@ -345,7 +393,6 @@
                 <div class="stat-card"><h4>💰 Total Tarifa</h4><div class="number" id="totalTarifaOTT">0</div></div>
             </div>
             
-            <!-- IMPUESTOS - OPCIÓN B (Tarjeta unificada color morado) -->
             <div id="impuestosSection" class="impuestos-section" style="display:none;">
                 <div class="impuestos-title">💰 IMPUESTOS</div>
                 <div class="impuesto-card-unificado">
@@ -384,7 +431,6 @@
             </div>
         </div>
         
-        <!-- Dashboard Panel CONDUCTOR -->
         <div id="dashboardPanelCONDUCTOR" class="dashboard-panel" style="display:none;">
             <div class="header">
                 <h2>🧑‍✈️ Portal de Conductor</h2>
@@ -436,9 +482,16 @@
             </div>
         </div>
     </div>
+    
+    <div id="detalleModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="cerrarModal()">&times;</span>
+            <div class="modal-title">📋 DETALLES DEL VIAJE</div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
 
     <script>
-        // URLs de tus hojas publicadas
         const DATOS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=161433051&output=csv';
         const USUARIOS_OTT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=1481764869&output=csv';
         const USUARIOS_CONDUCTOR_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=1400391866&output=csv';
@@ -448,10 +501,8 @@
         let currentUser = '';
         let currentRole = 'ott';
         let aplicaImpuestos = false;
-        
         let ottData = [];
         let conductorData = [];
-        
         let ottFilteredData = [];
         let conductorFilteredData = [];
         
@@ -619,11 +670,7 @@
                 document.getElementById('filterFechaHastaOTT').value = '';
                 
                 const impuestosSection = document.getElementById('impuestosSection');
-                if (aplicaImpuestos) {
-                    impuestosSection.style.display = 'block';
-                } else {
-                    impuestosSection.style.display = 'none';
-                }
+                impuestosSection.style.display = aplicaImpuestos ? 'block' : 'none';
                 
                 aplicarFiltrosOTT();
                 
@@ -733,91 +780,44 @@
             aplicarFiltrosOTT();
         }
         
-        function actualizarDashboardOTT() {
+        function actualizarDashboardCOND() {
             const piezasIndex = headers.indexOf('# PIEZAS');
             const fbeIndex = headers.indexOf('FBE');
-            const tarifaIndex = headers.indexOf('TARIFA');
-            const conductorUIndex = headers.indexOf('CONDUCTORU');
-            const vehiculoIndex = headers.indexOf('VEHICULO');
-            const facturarAIndex = headers.indexOf('FACTURAR A');
-            const conductorNombreIndex = headers.indexOf('CONDUCTOR');
+            const horaCIndex = headers.indexOf('HORA C');
             
-            let totalServicios = ottFilteredData.length;
-            let totalPiezas = 0, totalFBE = 0, totalTarifa = 0;
-            ottFilteredData.forEach(row => {
+            let totalServicios = conductorFilteredData.length;
+            let totalPiezas = 0, totalFBE = 0;
+            
+            conductorFilteredData.forEach(row => {
                 totalPiezas += parseFloat(row[piezasIndex]) || 0;
                 totalFBE += parseFloat(row[fbeIndex]) || 0;
-                totalTarifa += parseFloat(row[tarifaIndex]) || 0;
             });
             
-            document.getElementById('totalServiciosOTT').innerText = formatNumber(totalServicios);
-            document.getElementById('totalPiezasOTT').innerText = formatNumber(totalPiezas);
-            document.getElementById('totalFBEOTT').innerText = formatNumber(totalFBE);
-            document.getElementById('totalTarifaOTT').innerText = '$ ' + formatNumber(totalTarifa);
-            document.getElementById('totalRegistrosOTT').innerHTML = `📊 ${formatNumber(totalServicios)} Servicios`;
-            document.getElementById('subtotalServiciosOTT').innerText = formatNumber(totalServicios);
-            document.getElementById('subtotalPiezasOTT').innerText = formatNumber(totalPiezas);
-            document.getElementById('subtotalFBEOTT').innerText = formatNumber(totalFBE);
-            document.getElementById('subtotalTarifaOTT').innerHTML = '$ ' + formatNumber(totalTarifa);
+            document.getElementById('totalServiciosCOND').innerText = formatNumber(totalServicios);
+            document.getElementById('totalCarguesCOND').innerText = formatNumber(totalServicios);
+            document.getElementById('totalPiezasCOND').innerText = formatNumber(totalPiezas);
+            document.getElementById('totalFBECOND').innerText = formatNumber(totalFBE);
+            document.getElementById('totalRegistrosCOND').innerHTML = `📊 ${formatNumber(totalServicios)} Servicios`;
+            document.getElementById('subtotalServiciosCOND').innerText = formatNumber(totalServicios);
+            document.getElementById('subtotalPiezasCOND').innerText = formatNumber(totalPiezas);
+            document.getElementById('subtotalFBECOND').innerText = formatNumber(totalFBE);
             
-            if (aplicaImpuestos) {
-                const retencion = totalTarifa * 0.01;
-                const reteica = totalTarifa * 0.007;
-                document.getElementById('retencionValue').innerHTML = '$ ' + formatNumber(retencion);
-                document.getElementById('reteicaValue').innerHTML = '$ ' + formatNumber(reteica);
+            // Ordenar por HORA C antes de renderizar
+            if (horaCIndex !== -1 && conductorFilteredData.length > 0) {
+                conductorFilteredData.sort((a, b) => {
+                    function horaAMinutos(horaStr) {
+                        if (!horaStr) return 0;
+                        horaStr = horaStr.trim();
+                        let partes = horaStr.split(':');
+                        if (partes.length !== 2) return 0;
+                        return (parseInt(partes[0]) || 0) * 60 + (parseInt(partes[1]) || 0);
+                    }
+                    return horaAMinutos(a[horaCIndex]) - horaAMinutos(b[horaCIndex]);
+                });
             }
             
-            const resConductor = {};
-            ottFilteredData.forEach(row => {
-                const keyU = row[conductorUIndex] || 'SIN ASIGNAR';
-                const nombreCompleto = row[conductorNombreIndex] || keyU;
-                if (!resConductor[keyU]) {
-                    resConductor[keyU] = { nombre: nombreCompleto, s: 0, p: 0, f: 0, t: 0 };
-                }
-                resConductor[keyU].s++;
-                resConductor[keyU].p += parseFloat(row[piezasIndex]) || 0;
-                resConductor[keyU].f += parseFloat(row[fbeIndex]) || 0;
-                resConductor[keyU].t += parseFloat(row[tarifaIndex]) || 0;
-            });
-            let htmlCond = '';
-            Object.values(resConductor).forEach(v => {
-                htmlCond += `<div class="resumen-card"><strong>${v.nombre}</strong><br>📋 ${formatNumber(v.s)} | 📦 ${formatNumber(v.p)} | ⚖️ ${formatNumber(v.f)} | 💰 $${formatNumber(v.t)}</div>`;
-            });
-            document.getElementById('resumenConductorOTT').innerHTML = htmlCond || '<div>Sin datos</div>';
-            
-            const resVehiculo = {};
-            ottFilteredData.forEach(row => {
-                const key = row[vehiculoIndex] || 'SIN ASIGNAR';
-                if (!resVehiculo[key]) resVehiculo[key] = { s: 0, p: 0, f: 0, t: 0 };
-                resVehiculo[key].s++;
-                resVehiculo[key].p += parseFloat(row[piezasIndex]) || 0;
-                resVehiculo[key].f += parseFloat(row[fbeIndex]) || 0;
-                resVehiculo[key].t += parseFloat(row[tarifaIndex]) || 0;
-            });
-            let htmlVeh = '';
-            Object.entries(resVehiculo).forEach(([k, v]) => {
-                htmlVeh += `<div class="resumen-card"><strong>${k}</strong><br>📋 ${formatNumber(v.s)} | 📦 ${formatNumber(v.p)} | ⚖️ ${formatNumber(v.f)} | 💰 $${formatNumber(v.t)}</div>`;
-            });
-            document.getElementById('resumenVehiculoOTT').innerHTML = htmlVeh || '<div>Sin datos</div>';
-            
-            const resFactura = {};
-            ottFilteredData.forEach(row => {
-                const key = row[facturarAIndex] || 'SIN ASIGNAR';
-                if (!resFactura[key]) resFactura[key] = { s: 0, p: 0, f: 0, t: 0 };
-                resFactura[key].s++;
-                resFactura[key].p += parseFloat(row[piezasIndex]) || 0;
-                resFactura[key].f += parseFloat(row[fbeIndex]) || 0;
-                resFactura[key].t += parseFloat(row[tarifaIndex]) || 0;
-            });
-            let htmlFact = '';
-            Object.entries(resFactura).forEach(([k, v]) => {
-                htmlFact += `<div class="resumen-card"><strong>${k}</strong><br>📋 ${formatNumber(v.s)} | 📦 ${formatNumber(v.p)} | ⚖️ ${formatNumber(v.f)} | 💰 $${formatNumber(v.t)}</div>`;
-            });
-            document.getElementById('resumenFacturarAOTT').innerHTML = htmlFact || '<div>Sin datos</div>';
-            
-            renderTableOTT(ottFilteredData);
+            renderTableCOND(conductorFilteredData);
         }
-        
         function renderTableOTT(data) {
             const container = document.getElementById('tableContainerOTT');
             if (data.length === 0) {
@@ -825,32 +825,40 @@
                 return;
             }
             
-            const columnsToShow = ['ORIGEN', 'DESTINO', 'FACTURAR A', 'PRODUCTO', '# PIEZAS', 'FBE', 'FECHA E', 'CONDUCTOR', 'VEHICULO', 'ORDEN R', 'TARIFA', 'TIPO DE VIAJE', 'ESTADO DE VIAJE'];
-            const columnTitles = ['ORIGEN', 'DESTINO', 'FACTURAR A', 'PRODUCTO', '# PIEZAS', 'FBE', 'FECHA ENTREGA', 'CONDUCTOR', 'VEHICULO', 'ORDEN DE RECORRIDO', 'TARIFA', 'TIPO VIAJE', 'ESTADO'];
+            const idIndex = headers.indexOf('ID');
+            const columnsToShow = ['ID', 'ORIGEN', 'DESTINO', 'FACTURAR A', 'PRODUCTO', '# PIEZAS', 'FBE', 'FECHA E', 'CONDUCTOR', 'VEHICULO', 'ORDEN R', 'TARIFA', 'TIPO DE VIAJE', 'ESTADO DE VIAJE'];
+            const columnTitles = ['VER', 'ID', 'ORIGEN', 'DESTINO', 'FACTURAR A', 'PRODUCTO', '# PIEZAS', 'FBE', 'FECHA ENTREGA', 'CONDUCTOR', 'VEHICULO', 'ORDEN DE RECORRIDO', 'TARIFA', 'TIPO VIAJE', 'ESTADO'];
             
             const indicesToShow = columnsToShow.map(col => headers.indexOf(col)).filter(idx => idx !== -1);
-            const titlesToShow = columnTitles.filter((_, i) => indicesToShow[i] !== -1);
+            const titlesToShow = columnTitles.filter((_, i) => i === 0 || indicesToShow[i-1] !== -1);
             
             let html = '<table><thead><tr>';
             titlesToShow.forEach(title => {
                 html += `<th style="background:#1a73e8; color:white; padding:12px; border:1px solid #ddd;">${title}</th>`;
             });
-            html += '</thead><tbody>';
+            html += '</tr></thead><tbody>';
             
-            data.forEach(row => {
+            data.forEach((row, rowIndex) => {
                 html += '<tr>';
+                html += `<td style="border:1px solid #ddd; padding:8px; text-align:center;"><button class="btn-ver" onclick="verDetalle(${rowIndex}, 'ott')">👁️ VER</button></td>`;
+                if (idIndex !== -1) {
+                    html += `<td style="border:1px solid #ddd; padding:8px;">${row[idIndex] || '-'}</td>`;
+                }
                 indicesToShow.forEach(idx => {
-                    let value = row[idx] || '-';
-                    if (headers[idx] === 'TARIFA' && value !== '-') {
-                        html += `<td style="border:1px solid #ddd; padding:8px; text-align:right;">$${formatNumber(parseFloat(value))}</td>`;
-                    } else {
-                        html += `<td style="border:1px solid #ddd; padding:8px;">${value}</td>`;
+                    if (headers[idx] !== 'ID') {
+                        let value = row[idx] || '-';
+                        if (headers[idx] === 'TARIFA' && value !== '-') {
+                            html += `<td style="border:1px solid #ddd; padding:8px; text-align:right;">$${formatNumber(parseFloat(value))}</td>`;
+                        } else {
+                            html += `<td style="border:1px solid #ddd; padding:8px;">${value}</td>`;
+                        }
                     }
                 });
                 html += '</tr>';
             });
-            html += '</tbody><table>';
+            html += '</tbody></table>';
             container.innerHTML = html;
+            window.ottDataModal = data;
         }
         
         // ==================== FUNCIONES CONDUCTOR ====================
@@ -882,6 +890,7 @@
             const vehiculoIndex = headers.indexOf('VEHICULO');
             const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
             const fechaIndex = headers.indexOf('FECHA E');
+            const horaCIndex = headers.indexOf('HORA C');
             
             function convertirFechaANumero(fecha) {
                 if (!fecha) return 0;
@@ -897,6 +906,16 @@
                 return parseInt(partes[2] + partes[1] + partes[0]);
             }
             
+            function horaAMinutos(horaStr) {
+                if (!horaStr) return 0;
+                horaStr = horaStr.trim();
+                let partes = horaStr.split(':');
+                if (partes.length !== 2) return 0;
+                let horas = parseInt(partes[0]) || 0;
+                let minutos = parseInt(partes[1]) || 0;
+                return horas * 60 + minutos;
+            }
+            
             conductorFilteredData = conductorData.filter(row => {
                 if (vehiculoFiltro && row[vehiculoIndex] !== vehiculoFiltro) return false;
                 if (estadoFiltro && row[estadoIndex] !== estadoFiltro) return false;
@@ -906,6 +925,14 @@
                 if (fechaHasta && fechaRowNum > convertirFechaANumero(fechaHasta)) return false;
                 return true;
             });
+            
+            if (horaCIndex !== -1 && conductorFilteredData.length > 0) {
+                conductorFilteredData.sort((a, b) => {
+                    const horaA = a[horaCIndex] || '00:00';
+                    const horaB = b[horaCIndex] || '00:00';
+                    return horaAMinutos(horaA) - horaAMinutos(horaB);
+                });
+            }
             
             actualizarDashboardCOND();
         }
@@ -949,31 +976,147 @@
                 return;
             }
             
-            const columnsToShow = ['FECHA E', 'ORIGEN', 'DESTINO', 'PRODUCTO', '# PIEZAS', 'FBE', 'PESO', 'VEHICULO', 'ORDEN R', 'Zona Entrega', 'Contacto Entrega', 'HORA C', 'HORA D', 'ESTADO DE VIAJE'];
-            const columnTitles = ['FECHA ENTREGA', 'ORIGEN', 'DESTINO', 'PRODUCTO', 'PIEZAS', 'FBE', 'PESO', 'VEHICULO', 'ORDEN DE RECORRIDO', 'ZONA ENTREGA', 'CONTACTO ENTREGA', 'HORA CARGUE', 'HORA DESCARGUE', 'ESTADO'];
+            // Obtener índices de todas las columnas
+            const idIndex = headers.indexOf('ID');
+            const fechaEIndex = headers.indexOf('FECHA E');
+            const origenIndex = headers.indexOf('ORIGEN');
+            const destinoIndex = headers.indexOf('DESTINO');
+            const productoIndex = headers.indexOf('PRODUCTO');
+            const piezasIndex = headers.indexOf('# PIEZAS');
+            const fbeIndex = headers.indexOf('FBE');
+            const pesoIndex = headers.indexOf('PESO');
+            const vehiculoIndex = headers.indexOf('VEHICULO');
+            const ordenRIndex = headers.indexOf('ORDEN R');
+            const zonaEntregaIndex = headers.indexOf('Zona Entrega');
+            const contactoEntregaIndex = headers.indexOf('Contacto Entrega');
+            const horaCIndex = headers.indexOf('HORA C');
+            const horaDIndex = headers.indexOf('HORA D');
+            const observacionesIndex = headers.indexOf('OBSERVACIONES');
+            const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
             
-            const indicesToShow = columnsToShow.map(col => headers.indexOf(col)).filter(idx => idx !== -1);
-            const titlesToShow = columnTitles.filter((_, i) => indicesToShow[i] !== -1);
+            // Ordenar por HORA C (de más temprano a más tarde)
+            if (horaCIndex !== -1 && data.length > 0) {
+                data.sort((a, b) => {
+                    function horaAMinutos(horaStr) {
+                        if (!horaStr) return 0;
+                        horaStr = horaStr.trim();
+                        let partes = horaStr.split(':');
+                        if (partes.length !== 2) return 0;
+                        return (parseInt(partes[0]) || 0) * 60 + (parseInt(partes[1]) || 0);
+                    }
+                    return horaAMinutos(a[horaCIndex]) - horaAMinutos(b[horaCIndex]);
+                });
+            }
             
             let html = '<div style="overflow-x: auto; width: 100%;">';
-            html += '<table style="width: 100%; border-collapse: collapse; min-width: 1200px; font-size: 12px;">';
-            html += '<thead><tr>';
-            titlesToShow.forEach(title => {
-                html += `<th style="background: #1a73e8; color: white; padding: 10px 8px; text-align: center; border: 1px solid #ddd; white-space: nowrap;">${title}</th>`;
-            });
-            html += '</tr></thead><tbody>';
+            html += '<table style="width: 100%; border-collapse: collapse; min-width: 1800px; font-size: 12px;">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 50px;">VER</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 60px;">ID</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 100px;">FECHA ENTREGA</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 80px;">ORIGEN</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 80px;">DESTINO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 100px;">PRODUCTO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 60px;">PIEZAS</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 60px;">FBE</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 60px;">PESO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 90px;">VEHICULO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 120px;">ORDEN DE RECORRIDO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 100px;">ZONA ENTREGA</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 120px;">CONTACTO ENTREGA</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 90px;">HORA CARGUE</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 100px;">HORA DESCARGUE</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 200px;">OBSERVACIONES</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 100px;">ESTADO</th>';
+            html += '</tr>';
+            html += '</thead><tbody>';
             
-            data.forEach(row => {
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+                
+                // Obtener valores
+                const idValue = (idIndex !== -1 && row[idIndex]) ? row[idIndex] : '-';
+                const fechaValue = (fechaEIndex !== -1 && row[fechaEIndex]) ? row[fechaEIndex] : '-';
+                const origenValue = (origenIndex !== -1 && row[origenIndex]) ? row[origenIndex] : '-';
+                const destinoValue = (destinoIndex !== -1 && row[destinoIndex]) ? row[destinoIndex] : '-';
+                const productoValue = (productoIndex !== -1 && row[productoIndex]) ? row[productoIndex] : '-';
+                const piezasValue = (piezasIndex !== -1 && row[piezasIndex]) ? formatNumber(parseFloat(row[piezasIndex]) || 0) : '0';
+                const fbeValue = (fbeIndex !== -1 && row[fbeIndex]) ? formatNumber(parseFloat(row[fbeIndex]) || 0) : '0';
+                const pesoValue = (pesoIndex !== -1 && row[pesoIndex]) ? formatNumber(parseFloat(row[pesoIndex]) || 0) : '0';
+                const vehiculoValue = (vehiculoIndex !== -1 && row[vehiculoIndex]) ? row[vehiculoIndex] : '-';
+                const ordenValue = (ordenRIndex !== -1 && row[ordenRIndex]) ? row[ordenRIndex] : '-';
+                const zonaValue = (zonaEntregaIndex !== -1 && row[zonaEntregaIndex]) ? row[zonaEntregaIndex] : '-';
+                const contactoValue = (contactoEntregaIndex !== -1 && row[contactoEntregaIndex]) ? row[contactoEntregaIndex] : '-';
+                const horaCValue = (horaCIndex !== -1 && row[horaCIndex]) ? row[horaCIndex] : '-';
+                const horaDValue = (horaDIndex !== -1 && row[horaDIndex]) ? row[horaDIndex] : '-';
+                const observacionesValue = (observacionesIndex !== -1 && row[observacionesIndex]) ? row[observacionesIndex] : '-';
+                const estadoValue = (estadoIndex !== -1 && row[estadoIndex]) ? row[estadoIndex] : '-';
+                
                 html += '<tr>';
-                indicesToShow.forEach(idx => {
-                    let value = row[idx] || '-';
-                    html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top;">${value}</td>`;
-                });
+                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;"><button class="btn-ver" onclick="verDetalle(${i}, 'conductor')">👁️ VER</button></td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${idValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${fechaValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${origenValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${destinoValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${productoValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${piezasValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${fbeValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${pesoValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${vehiculoValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${ordenValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${zonaValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${contactoValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${horaCValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${horaDValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px; word-break: break-word; max-width: 200px;">${observacionesValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px;">${estadoValue}</td>`;
                 html += '</tr>';
-            });
-            html += '</tbody></table></div>';
+            }
+            
+            html += '</tbody></table>';
+            html += '</div>';
             
             container.innerHTML = html;
+            window.conductorDataModal = data;
+        }
+        
+        function verDetalle(rowIndex, tipo) {
+            const data = tipo === 'ott' ? window.ottDataModal : window.conductorDataModal;
+            if (!data || !data[rowIndex]) return;
+            
+            const row = data[rowIndex];
+            const modalBody = document.getElementById('modalBody');
+            
+            const camposImportantes = [
+                'ID', 'FECHA S', 'SOLICITANTE', 'ORIGEN', 'DESTINO', 'FACTURAR A', 'PRODUCTO', 
+                '# PIEZAS', 'FBE', 'PESO', 'FECHA E', 'HORA E', 'RECORRIDO', 'OPERACION', 'TIPO V', 
+                'OTT', 'CONDUCTOR', 'VEHICULO', 'ORDEN R', 'Zona Entrega', 'Contacto Entrega', 
+                'HORA C', 'HORA D', 'TARIFA', 'TIPO DE VIAJE', 'ESTADO DE VIAJE', 'OBSERVACIONES', 'CENTRO DE C'
+            ];
+            
+            let html = '';
+            camposImportantes.forEach(campo => {
+                const idx = headers.indexOf(campo);
+                if (idx !== -1 && row[idx] && row[idx].trim() !== '') {
+                    let label = campo;
+                    if (campo === 'FECHA E') label = 'FECHA ENTREGA';
+                    if (campo === 'ORDEN R') label = 'ORDEN DE RECORRIDO';
+                    if (campo === 'HORA C') label = 'HORA CARGUE';
+                    if (campo === 'HORA D') label = 'HORA DESCARGUE';
+                    if (campo === 'ESTADO DE VIAJE') label = 'ESTADO';
+                    if (campo === '# PIEZAS') label = 'PIEZAS';
+                    html += `<div class="modal-field"><div class="modal-field-label">${label}:</div><div class="modal-field-value">${row[idx]}</div></div>`;
+                }
+            });
+            
+            if (html === '') html = '<div style="text-align:center;">No hay detalles disponibles</div>';
+            modalBody.innerHTML = html;
+            document.getElementById('detalleModal').style.display = 'block';
+        }
+        
+        function cerrarModal() {
+            document.getElementById('detalleModal').style.display = 'none';
         }
         
         function logout() {
