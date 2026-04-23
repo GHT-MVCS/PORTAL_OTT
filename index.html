@@ -496,7 +496,6 @@
         const USUARIOS_OTT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=1481764869&output=csv';
         const USUARIOS_CONDUCTOR_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=1400391866&output=csv';
         
-        let allData = [];
         let headers = [];
         let currentUser = '';
         let currentRole = 'ott';
@@ -519,7 +518,6 @@
             document.getElementById('roleOtt').classList.toggle('active', isOtt);
             document.getElementById('roleConductor').classList.toggle('active', !isOtt);
             document.getElementById('loginTitle').innerText = isOtt ? '🚛 Portal OTT' : '🧑‍✈️ Portal Conductor';
-            document.getElementById('loginSubtitle').innerText = '';
             document.getElementById('userLabel').innerText = isOtt ? 'Usuario OTT' : 'Usuario Conductor';
             document.getElementById('userInput').placeholder = isOtt ? 'Ej: MA, RZ, TL' : 'Ej: ANDRESR';
             document.getElementById('loginButton').innerText = isOtt ? '🔐 Acceder como OTT' : '🔐 Acceder como Conductor';
@@ -530,26 +528,40 @@
 
         function parseCSV(csvText) {
             const rows = [];
-            const lines = csvText.split(/\r?\n/);
-            for (let line of lines) {
-                if (line.trim() === '') continue;
-                const row = [];
-                let inQuotes = false;
-                let currentCell = '';
-                for (let i = 0; i < line.length; i++) {
-                    const char = line[i];
-                    if (char === '"') {
-                        inQuotes = !inQuotes;
-                    } else if (char === ',' && !inQuotes) {
-                        row.push(currentCell.trim());
-                        currentCell = '';
-                    } else {
-                        currentCell += char;
+            let currentRow = [];
+            let currentCell = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < csvText.length; i++) {
+                const char = csvText[i];
+                const nextChar = csvText[i + 1];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                    currentCell += char;
+                } else if (char === ',' && !inQuotes) {
+                    currentRow.push(currentCell.trim());
+                    currentCell = '';
+                } else if ((char === '\n' || char === '\r') && !inQuotes) {
+                    if (char === '\r' && nextChar === '\n') i++; // saltar \r\n
+                    currentRow.push(currentCell.trim());
+                    if (currentRow.length > 0 && currentRow.some(cell => cell !== '')) {
+                        rows.push(currentRow);
                     }
+                    currentRow = [];
+                    currentCell = '';
+                } else {
+                    currentCell += char;
                 }
-                row.push(currentCell.trim());
-                rows.push(row);
             }
+            
+            if (currentCell !== '' || currentRow.length > 0) {
+                currentRow.push(currentCell.trim());
+                if (currentRow.length > 0 && currentRow.some(cell => cell !== '')) {
+                    rows.push(currentRow);
+                }
+            }
+            
             return rows;
         }
 
@@ -780,44 +792,91 @@
             aplicarFiltrosOTT();
         }
         
-        function actualizarDashboardCOND() {
+        function actualizarDashboardOTT() {
             const piezasIndex = headers.indexOf('# PIEZAS');
             const fbeIndex = headers.indexOf('FBE');
-            const horaCIndex = headers.indexOf('HORA C');
+            const tarifaIndex = headers.indexOf('TARIFA');
+            const conductorUIndex = headers.indexOf('CONDUCTORU');
+            const vehiculoIndex = headers.indexOf('VEHICULO');
+            const facturarAIndex = headers.indexOf('FACTURAR A');
+            const conductorNombreIndex = headers.indexOf('CONDUCTOR');
             
-            let totalServicios = conductorFilteredData.length;
-            let totalPiezas = 0, totalFBE = 0;
-            
-            conductorFilteredData.forEach(row => {
+            let totalServicios = ottFilteredData.length;
+            let totalPiezas = 0, totalFBE = 0, totalTarifa = 0;
+            ottFilteredData.forEach(row => {
                 totalPiezas += parseFloat(row[piezasIndex]) || 0;
                 totalFBE += parseFloat(row[fbeIndex]) || 0;
+                totalTarifa += parseFloat(row[tarifaIndex]) || 0;
             });
             
-            document.getElementById('totalServiciosCOND').innerText = formatNumber(totalServicios);
-            document.getElementById('totalCarguesCOND').innerText = formatNumber(totalServicios);
-            document.getElementById('totalPiezasCOND').innerText = formatNumber(totalPiezas);
-            document.getElementById('totalFBECOND').innerText = formatNumber(totalFBE);
-            document.getElementById('totalRegistrosCOND').innerHTML = `📊 ${formatNumber(totalServicios)} Servicios`;
-            document.getElementById('subtotalServiciosCOND').innerText = formatNumber(totalServicios);
-            document.getElementById('subtotalPiezasCOND').innerText = formatNumber(totalPiezas);
-            document.getElementById('subtotalFBECOND').innerText = formatNumber(totalFBE);
+            document.getElementById('totalServiciosOTT').innerText = formatNumber(totalServicios);
+            document.getElementById('totalPiezasOTT').innerText = formatNumber(totalPiezas);
+            document.getElementById('totalFBEOTT').innerText = formatNumber(totalFBE);
+            document.getElementById('totalTarifaOTT').innerText = '$ ' + formatNumber(totalTarifa);
+            document.getElementById('totalRegistrosOTT').innerHTML = `📊 ${formatNumber(totalServicios)} Servicios`;
+            document.getElementById('subtotalServiciosOTT').innerText = formatNumber(totalServicios);
+            document.getElementById('subtotalPiezasOTT').innerText = formatNumber(totalPiezas);
+            document.getElementById('subtotalFBEOTT').innerText = formatNumber(totalFBE);
+            document.getElementById('subtotalTarifaOTT').innerHTML = '$ ' + formatNumber(totalTarifa);
             
-            // Ordenar por HORA C antes de renderizar
-            if (horaCIndex !== -1 && conductorFilteredData.length > 0) {
-                conductorFilteredData.sort((a, b) => {
-                    function horaAMinutos(horaStr) {
-                        if (!horaStr) return 0;
-                        horaStr = horaStr.trim();
-                        let partes = horaStr.split(':');
-                        if (partes.length !== 2) return 0;
-                        return (parseInt(partes[0]) || 0) * 60 + (parseInt(partes[1]) || 0);
-                    }
-                    return horaAMinutos(a[horaCIndex]) - horaAMinutos(b[horaCIndex]);
-                });
+            if (aplicaImpuestos) {
+                const retencion = totalTarifa * 0.01;
+                const reteica = totalTarifa * 0.007;
+                document.getElementById('retencionValue').innerHTML = '$ ' + formatNumber(retencion);
+                document.getElementById('reteicaValue').innerHTML = '$ ' + formatNumber(reteica);
             }
             
-            renderTableCOND(conductorFilteredData);
+            const resConductor = {};
+            ottFilteredData.forEach(row => {
+                const keyU = row[conductorUIndex] || 'SIN ASIGNAR';
+                const nombreCompleto = row[conductorNombreIndex] || keyU;
+                if (!resConductor[keyU]) {
+                    resConductor[keyU] = { nombre: nombreCompleto, s: 0, p: 0, f: 0, t: 0 };
+                }
+                resConductor[keyU].s++;
+                resConductor[keyU].p += parseFloat(row[piezasIndex]) || 0;
+                resConductor[keyU].f += parseFloat(row[fbeIndex]) || 0;
+                resConductor[keyU].t += parseFloat(row[tarifaIndex]) || 0;
+            });
+            let htmlCond = '';
+            Object.values(resConductor).forEach(v => {
+                htmlCond += `<div class="resumen-card"><strong>${v.nombre}</strong><br>📋 ${formatNumber(v.s)} | 📦 ${formatNumber(v.p)} | ⚖️ ${formatNumber(v.f)} | 💰 $${formatNumber(v.t)}</div>`;
+            });
+            document.getElementById('resumenConductorOTT').innerHTML = htmlCond || '<div>Sin datos</div>';
+            
+            const resVehiculo = {};
+            ottFilteredData.forEach(row => {
+                const key = row[vehiculoIndex] || 'SIN ASIGNAR';
+                if (!resVehiculo[key]) resVehiculo[key] = { s: 0, p: 0, f: 0, t: 0 };
+                resVehiculo[key].s++;
+                resVehiculo[key].p += parseFloat(row[piezasIndex]) || 0;
+                resVehiculo[key].f += parseFloat(row[fbeIndex]) || 0;
+                resVehiculo[key].t += parseFloat(row[tarifaIndex]) || 0;
+            });
+            let htmlVeh = '';
+            Object.entries(resVehiculo).forEach(([k, v]) => {
+                htmlVeh += `<div class="resumen-card"><strong>${k}</strong><br>📋 ${formatNumber(v.s)} | 📦 ${formatNumber(v.p)} | ⚖️ ${formatNumber(v.f)} | 💰 $${formatNumber(v.t)}</div>`;
+            });
+            document.getElementById('resumenVehiculoOTT').innerHTML = htmlVeh || '<div>Sin datos</div>';
+            
+            const resFactura = {};
+            ottFilteredData.forEach(row => {
+                const key = row[facturarAIndex] || 'SIN ASIGNAR';
+                if (!resFactura[key]) resFactura[key] = { s: 0, p: 0, f: 0, t: 0 };
+                resFactura[key].s++;
+                resFactura[key].p += parseFloat(row[piezasIndex]) || 0;
+                resFactura[key].f += parseFloat(row[fbeIndex]) || 0;
+                resFactura[key].t += parseFloat(row[tarifaIndex]) || 0;
+            });
+            let htmlFact = '';
+            Object.entries(resFactura).forEach(([k, v]) => {
+                htmlFact += `<div class="resumen-card"><strong>${k}</strong><br>📋 ${formatNumber(v.s)} | 📦 ${formatNumber(v.p)} | ⚖️ ${formatNumber(v.f)} | 💰 $${formatNumber(v.t)}</div>`;
+            });
+            document.getElementById('resumenFacturarAOTT').innerHTML = htmlFact || '<div>Sin datos</div>';
+            
+            renderTableOTT(ottFilteredData);
         }
+        
         function renderTableOTT(data) {
             const container = document.getElementById('tableContainerOTT');
             if (data.length === 0) {
@@ -830,10 +889,11 @@
             const columnTitles = ['VER', 'ID', 'ORIGEN', 'DESTINO', 'FACTURAR A', 'PRODUCTO', '# PIEZAS', 'FBE', 'FECHA ENTREGA', 'CONDUCTOR', 'VEHICULO', 'ORDEN DE RECORRIDO', 'TARIFA', 'TIPO VIAJE', 'ESTADO'];
             
             const indicesToShow = columnsToShow.map(col => headers.indexOf(col)).filter(idx => idx !== -1);
-            const titlesToShow = columnTitles.filter((_, i) => i === 0 || indicesToShow[i-1] !== -1);
             
             let html = '<table><thead><tr>';
-            titlesToShow.forEach(title => {
+            html += '<th style="background:#1a73e8; color:white; padding:12px; border:1px solid #ddd;">VER</th>';
+            html += '<th style="background:#1a73e8; color:white; padding:12px; border:1px solid #ddd;">ID</th>';
+            columnTitles.slice(2).forEach(title => {
                 html += `<th style="background:#1a73e8; color:white; padding:12px; border:1px solid #ddd;">${title}</th>`;
             });
             html += '</tr></thead><tbody>';
@@ -841,17 +901,13 @@
             data.forEach((row, rowIndex) => {
                 html += '<tr>';
                 html += `<td style="border:1px solid #ddd; padding:8px; text-align:center;"><button class="btn-ver" onclick="verDetalle(${rowIndex}, 'ott')">👁️ VER</button></td>`;
-                if (idIndex !== -1) {
-                    html += `<td style="border:1px solid #ddd; padding:8px;">${row[idIndex] || '-'}</td>`;
-                }
+                html += `<td style="border:1px solid #ddd; padding:8px;">${idIndex !== -1 ? (row[idIndex] || '-') : '-'}</td>`;
                 indicesToShow.forEach(idx => {
-                    if (headers[idx] !== 'ID') {
-                        let value = row[idx] || '-';
-                        if (headers[idx] === 'TARIFA' && value !== '-') {
-                            html += `<td style="border:1px solid #ddd; padding:8px; text-align:right;">$${formatNumber(parseFloat(value))}</td>`;
-                        } else {
-                            html += `<td style="border:1px solid #ddd; padding:8px;">${value}</td>`;
-                        }
+                    let value = row[idx] || '-';
+                    if (headers[idx] === 'TARIFA' && value !== '-') {
+                        html += `<td style="border:1px solid #ddd; padding:8px; text-align:right;">$${formatNumber(parseFloat(value))}</td>`;
+                    } else {
+                        html += `<td style="border:1px solid #ddd; padding:8px;">${value}</td>`;
                     }
                 });
                 html += '</tr>';
@@ -890,7 +946,6 @@
             const vehiculoIndex = headers.indexOf('VEHICULO');
             const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
             const fechaIndex = headers.indexOf('FECHA E');
-            const horaCIndex = headers.indexOf('HORA C');
             
             function convertirFechaANumero(fecha) {
                 if (!fecha) return 0;
@@ -906,16 +961,6 @@
                 return parseInt(partes[2] + partes[1] + partes[0]);
             }
             
-            function horaAMinutos(horaStr) {
-                if (!horaStr) return 0;
-                horaStr = horaStr.trim();
-                let partes = horaStr.split(':');
-                if (partes.length !== 2) return 0;
-                let horas = parseInt(partes[0]) || 0;
-                let minutos = parseInt(partes[1]) || 0;
-                return horas * 60 + minutos;
-            }
-            
             conductorFilteredData = conductorData.filter(row => {
                 if (vehiculoFiltro && row[vehiculoIndex] !== vehiculoFiltro) return false;
                 if (estadoFiltro && row[estadoIndex] !== estadoFiltro) return false;
@@ -925,14 +970,6 @@
                 if (fechaHasta && fechaRowNum > convertirFechaANumero(fechaHasta)) return false;
                 return true;
             });
-            
-            if (horaCIndex !== -1 && conductorFilteredData.length > 0) {
-                conductorFilteredData.sort((a, b) => {
-                    const horaA = a[horaCIndex] || '00:00';
-                    const horaB = b[horaCIndex] || '00:00';
-                    return horaAMinutos(horaA) - horaAMinutos(horaB);
-                });
-            }
             
             actualizarDashboardCOND();
         }
@@ -976,7 +1013,6 @@
                 return;
             }
             
-            // Obtener índices de todas las columnas
             const idIndex = headers.indexOf('ID');
             const fechaEIndex = headers.indexOf('FECHA E');
             const origenIndex = headers.indexOf('ORIGEN');
@@ -1010,32 +1046,29 @@
             
             let html = '<div style="overflow-x: auto; width: 100%;">';
             html += '<table style="width: 100%; border-collapse: collapse; min-width: 1800px; font-size: 12px;">';
-            html += '<thead>';
-            html += '<tr>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 50px;">VER</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 60px;">ID</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 100px;">FECHA ENTREGA</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 80px;">ORIGEN</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 80px;">DESTINO</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 100px;">PRODUCTO</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 60px;">PIEZAS</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 60px;">FBE</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 60px;">PESO</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 90px;">VEHICULO</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 120px;">ORDEN DE RECORRIDO</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 100px;">ZONA ENTREGA</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 120px;">CONTACTO ENTREGA</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 90px;">HORA CARGUE</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 100px;">HORA DESCARGUE</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 200px;">OBSERVACIONES</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd; white-space: nowrap; width: 100px;">ESTADO</th>';
-            html += '</tr>';
-            html += '</thead><tbody>';
+            html += '<thead><tr>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">VER</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ID</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">FECHA ENTREGA</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ORIGEN</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">DESTINO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">PRODUCTO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">PIEZAS</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">FBE</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">PESO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">VEHICULO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ORDEN DE RECORRIDO</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ZONA ENTREGA</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">CONTACTO ENTREGA</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">HORA CARGUE</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">HORA DESCARGUE</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">OBSERVACIONES</th>';
+            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ESTADO</th>';
+            html += '</tr></thead><tbody>';
             
             for (let i = 0; i < data.length; i++) {
                 const row = data[i];
                 
-                // Obtener valores
                 const idValue = (idIndex !== -1 && row[idIndex]) ? row[idIndex] : '-';
                 const fechaValue = (fechaEIndex !== -1 && row[fechaEIndex]) ? row[fechaEIndex] : '-';
                 const origenValue = (origenIndex !== -1 && row[origenIndex]) ? row[origenIndex] : '-';
@@ -1073,10 +1106,7 @@
                 html += `<td style="border: 1px solid #ddd; padding: 8px;">${estadoValue}</td>`;
                 html += '</tr>';
             }
-            
-            html += '</tbody></table>';
-            html += '</div>';
-            
+            html += '</tbody></table></div>';
             container.innerHTML = html;
             window.conductorDataModal = data;
         }
