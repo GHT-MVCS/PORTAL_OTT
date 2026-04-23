@@ -221,6 +221,48 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
         
+        /* Cuadro RECORRIDO */
+        .recorrido-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #1a73e8;
+        }
+        .recorrido-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1a73e8;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .recorrido-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .recorrido-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .recorrido-ruta {
+            font-weight: 500;
+            color: #333;
+        }
+        .recorrido-hora {
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: bold;
+            color: #1a73e8;
+        }
+        
         .table-wrapper {
             overflow-x: auto;
             border-radius: 10px;
@@ -477,6 +519,13 @@
                 <h4>📋 RESUMEN POR DESPACHO</h4>
                 <div><span id="subtotalServiciosCOND">0</span> servicios | <span id="subtotalPiezasCOND">0</span> piezas | <span id="subtotalFBECOND">0</span> FBE</div>
             </div>
+            
+            <!-- CUADRO RECORRIDO -->
+            <div class="recorrido-card" id="recorridoCard">
+                <div class="recorrido-title">🗺️ RECORRIDO</div>
+                <div id="recorridoItems" class="recorrido-items">Cargando...</div>
+            </div>
+            
             <div class="table-wrapper">
                 <div id="tableContainerCOND">Cargando datos...</div>
             </div>
@@ -526,6 +575,7 @@
             document.getElementById('loginError').style.display = 'none';
         }
 
+        // PARSE CSV MEJORADO - Maneja saltos de línea dentro de comillas
         function parseCSV(csvText) {
             const rows = [];
             let currentRow = [];
@@ -540,11 +590,22 @@
                     inQuotes = !inQuotes;
                     currentCell += char;
                 } else if (char === ',' && !inQuotes) {
-                    currentRow.push(currentCell.trim());
+                    // Limpiar comillas del inicio y final
+                    let cleanCell = currentCell.trim();
+                    if (cleanCell.startsWith('"') && cleanCell.endsWith('"')) {
+                        cleanCell = cleanCell.substring(1, cleanCell.length - 1);
+                        cleanCell = cleanCell.replace(/""/g, '"');
+                    }
+                    currentRow.push(cleanCell);
                     currentCell = '';
                 } else if ((char === '\n' || char === '\r') && !inQuotes) {
-                    if (char === '\r' && nextChar === '\n') i++; // saltar \r\n
-                    currentRow.push(currentCell.trim());
+                    if (char === '\r' && nextChar === '\n') i++;
+                    let cleanCell = currentCell.trim();
+                    if (cleanCell.startsWith('"') && cleanCell.endsWith('"')) {
+                        cleanCell = cleanCell.substring(1, cleanCell.length - 1);
+                        cleanCell = cleanCell.replace(/""/g, '"');
+                    }
+                    currentRow.push(cleanCell);
                     if (currentRow.length > 0 && currentRow.some(cell => cell !== '')) {
                         rows.push(currentRow);
                     }
@@ -556,7 +617,12 @@
             }
             
             if (currentCell !== '' || currentRow.length > 0) {
-                currentRow.push(currentCell.trim());
+                let cleanCell = currentCell.trim();
+                if (cleanCell.startsWith('"') && cleanCell.endsWith('"')) {
+                    cleanCell = cleanCell.substring(1, cleanCell.length - 1);
+                    cleanCell = cleanCell.replace(/""/g, '"');
+                }
+                currentRow.push(cleanCell);
                 if (currentRow.length > 0 && currentRow.some(cell => cell !== '')) {
                     rows.push(currentRow);
                 }
@@ -564,7 +630,6 @@
             
             return rows;
         }
-
         async function loadUsuariosOTT() {
             try {
                 const response = await fetch(USUARIOS_OTT_URL);
@@ -705,6 +770,7 @@
                 const nombreCompleto = conductorData[0][conductorNombreIndex] || username;
                 
                 cargarListasCOND();
+                // Filtrar por fecha actual por defecto
                 document.getElementById('filterFechaDesdeCOND').value = hoy;
                 document.getElementById('filterFechaHastaCOND').value = hoy;
                 aplicarFiltrosCOND();
@@ -792,89 +858,43 @@
             aplicarFiltrosOTT();
         }
         
-        function actualizarDashboardOTT() {
+        function actualizarDashboardCOND() {
             const piezasIndex = headers.indexOf('# PIEZAS');
             const fbeIndex = headers.indexOf('FBE');
-            const tarifaIndex = headers.indexOf('TARIFA');
-            const conductorUIndex = headers.indexOf('CONDUCTORU');
-            const vehiculoIndex = headers.indexOf('VEHICULO');
-            const facturarAIndex = headers.indexOf('FACTURAR A');
-            const conductorNombreIndex = headers.indexOf('CONDUCTOR');
             
-            let totalServicios = ottFilteredData.length;
-            let totalPiezas = 0, totalFBE = 0, totalTarifa = 0;
-            ottFilteredData.forEach(row => {
+            let totalServicios = conductorFilteredData.length;
+            let totalPiezas = 0, totalFBE = 0;
+            
+            conductorFilteredData.forEach(row => {
                 totalPiezas += parseFloat(row[piezasIndex]) || 0;
                 totalFBE += parseFloat(row[fbeIndex]) || 0;
-                totalTarifa += parseFloat(row[tarifaIndex]) || 0;
             });
             
-            document.getElementById('totalServiciosOTT').innerText = formatNumber(totalServicios);
-            document.getElementById('totalPiezasOTT').innerText = formatNumber(totalPiezas);
-            document.getElementById('totalFBEOTT').innerText = formatNumber(totalFBE);
-            document.getElementById('totalTarifaOTT').innerText = '$ ' + formatNumber(totalTarifa);
-            document.getElementById('totalRegistrosOTT').innerHTML = `📊 ${formatNumber(totalServicios)} Servicios`;
-            document.getElementById('subtotalServiciosOTT').innerText = formatNumber(totalServicios);
-            document.getElementById('subtotalPiezasOTT').innerText = formatNumber(totalPiezas);
-            document.getElementById('subtotalFBEOTT').innerText = formatNumber(totalFBE);
-            document.getElementById('subtotalTarifaOTT').innerHTML = '$ ' + formatNumber(totalTarifa);
+            document.getElementById('totalServiciosCOND').innerText = formatNumber(totalServicios);
+            document.getElementById('totalCarguesCOND').innerText = formatNumber(totalServicios);
+            document.getElementById('totalPiezasCOND').innerText = formatNumber(totalPiezas);
+            document.getElementById('totalFBECOND').innerText = formatNumber(totalFBE);
+            document.getElementById('totalRegistrosCOND').innerHTML = `📊 ${formatNumber(totalServicios)} Servicios`;
+            document.getElementById('subtotalServiciosCOND').innerText = formatNumber(totalServicios);
+            document.getElementById('subtotalPiezasCOND').innerText = formatNumber(totalPiezas);
+            document.getElementById('subtotalFBECOND').innerText = formatNumber(totalFBE);
             
-            if (aplicaImpuestos) {
-                const retencion = totalTarifa * 0.01;
-                const reteica = totalTarifa * 0.007;
-                document.getElementById('retencionValue').innerHTML = '$ ' + formatNumber(retencion);
-                document.getElementById('reteicaValue').innerHTML = '$ ' + formatNumber(reteica);
+            // Ordenar por HORA C antes de renderizar
+            const horaCIndex = headers.indexOf('HORA C');
+            if (horaCIndex !== -1 && conductorFilteredData.length > 0) {
+                conductorFilteredData.sort((a, b) => {
+                    function horaAMinutos(horaStr) {
+                        if (!horaStr || horaStr === '-') return 9999;
+                        const partes = horaStr.split(':');
+                        if (partes.length !== 2) return 9999;
+                        return (parseInt(partes[0]) || 0) * 60 + (parseInt(partes[1]) || 0);
+                    }
+                    return horaAMinutos(a[horaCIndex]) - horaAMinutos(b[horaCIndex]);
+                });
             }
             
-            const resConductor = {};
-            ottFilteredData.forEach(row => {
-                const keyU = row[conductorUIndex] || 'SIN ASIGNAR';
-                const nombreCompleto = row[conductorNombreIndex] || keyU;
-                if (!resConductor[keyU]) {
-                    resConductor[keyU] = { nombre: nombreCompleto, s: 0, p: 0, f: 0, t: 0 };
-                }
-                resConductor[keyU].s++;
-                resConductor[keyU].p += parseFloat(row[piezasIndex]) || 0;
-                resConductor[keyU].f += parseFloat(row[fbeIndex]) || 0;
-                resConductor[keyU].t += parseFloat(row[tarifaIndex]) || 0;
-            });
-            let htmlCond = '';
-            Object.values(resConductor).forEach(v => {
-                htmlCond += `<div class="resumen-card"><strong>${v.nombre}</strong><br>📋 ${formatNumber(v.s)} | 📦 ${formatNumber(v.p)} | ⚖️ ${formatNumber(v.f)} | 💰 $${formatNumber(v.t)}</div>`;
-            });
-            document.getElementById('resumenConductorOTT').innerHTML = htmlCond || '<div>Sin datos</div>';
-            
-            const resVehiculo = {};
-            ottFilteredData.forEach(row => {
-                const key = row[vehiculoIndex] || 'SIN ASIGNAR';
-                if (!resVehiculo[key]) resVehiculo[key] = { s: 0, p: 0, f: 0, t: 0 };
-                resVehiculo[key].s++;
-                resVehiculo[key].p += parseFloat(row[piezasIndex]) || 0;
-                resVehiculo[key].f += parseFloat(row[fbeIndex]) || 0;
-                resVehiculo[key].t += parseFloat(row[tarifaIndex]) || 0;
-            });
-            let htmlVeh = '';
-            Object.entries(resVehiculo).forEach(([k, v]) => {
-                htmlVeh += `<div class="resumen-card"><strong>${k}</strong><br>📋 ${formatNumber(v.s)} | 📦 ${formatNumber(v.p)} | ⚖️ ${formatNumber(v.f)} | 💰 $${formatNumber(v.t)}</div>`;
-            });
-            document.getElementById('resumenVehiculoOTT').innerHTML = htmlVeh || '<div>Sin datos</div>';
-            
-            const resFactura = {};
-            ottFilteredData.forEach(row => {
-                const key = row[facturarAIndex] || 'SIN ASIGNAR';
-                if (!resFactura[key]) resFactura[key] = { s: 0, p: 0, f: 0, t: 0 };
-                resFactura[key].s++;
-                resFactura[key].p += parseFloat(row[piezasIndex]) || 0;
-                resFactura[key].f += parseFloat(row[fbeIndex]) || 0;
-                resFactura[key].t += parseFloat(row[tarifaIndex]) || 0;
-            });
-            let htmlFact = '';
-            Object.entries(resFactura).forEach(([k, v]) => {
-                htmlFact += `<div class="resumen-card"><strong>${k}</strong><br>📋 ${formatNumber(v.s)} | 📦 ${formatNumber(v.p)} | ⚖️ ${formatNumber(v.f)} | 💰 $${formatNumber(v.t)}</div>`;
-            });
-            document.getElementById('resumenFacturarAOTT').innerHTML = htmlFact || '<div>Sin datos</div>';
-            
-            renderTableOTT(ottFilteredData);
+            renderTableCOND(conductorFilteredData);
+            actualizarRecorrido(conductorFilteredData);
         }
         
         function renderTableOTT(data) {
@@ -947,16 +967,13 @@
             const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
             const fechaIndex = headers.indexOf('FECHA E');
             
-            function convertirFechaANumero(fecha) {
-                if (!fecha) return 0;
-                const partes = fecha.split('-');
-                if (partes.length !== 3) return 0;
-                return parseInt(partes[0] + partes[1] + partes[2]);
-            }
-            
-            function fechaSheetANumero(fechaSheet) {
-                if (!fechaSheet || fechaSheet.length < 10) return 0;
-                const partes = fechaSheet.split('/');
+            function fechaANumero(fechaStr) {
+                if (!fechaStr) return 0;
+                if (fechaStr.includes('-')) {
+                    const partes = fechaStr.split('-');
+                    return parseInt(partes[0] + partes[1] + partes[2]);
+                }
+                const partes = fechaStr.split('/');
                 if (partes.length !== 3) return 0;
                 return parseInt(partes[2] + partes[1] + partes[0]);
             }
@@ -965,9 +982,12 @@
                 if (vehiculoFiltro && row[vehiculoIndex] !== vehiculoFiltro) return false;
                 if (estadoFiltro && row[estadoIndex] !== estadoFiltro) return false;
                 
-                const fechaRowNum = fechaSheetANumero(row[fechaIndex]);
-                if (fechaDesde && fechaRowNum < convertirFechaANumero(fechaDesde)) return false;
-                if (fechaHasta && fechaRowNum > convertirFechaANumero(fechaHasta)) return false;
+                const fechaRowNum = fechaANumero(row[fechaIndex]);
+                const fechaDesdeNum = fechaANumero(fechaDesde);
+                const fechaHastaNum = fechaANumero(fechaHasta);
+                
+                if (fechaDesde && fechaRowNum < fechaDesdeNum) return false;
+                if (fechaHasta && fechaRowNum > fechaHastaNum) return false;
                 return true;
             });
             
@@ -1004,6 +1024,53 @@
             document.getElementById('subtotalFBECOND').innerText = formatNumber(totalFBE);
             
             renderTableCOND(conductorFilteredData);
+            actualizarRecorrido(conductorFilteredData);
+        }
+        
+        function actualizarRecorrido(data) {
+            const container = document.getElementById('recorridoItems');
+            if (data.length === 0) {
+                container.innerHTML = '<div class="recorrido-item">No hay servicios para mostrar</div>';
+                return;
+            }
+            
+            const origenIndex = headers.indexOf('ORIGEN');
+            const destinoIndex = headers.indexOf('DESTINO');
+            const ordenRIndex = headers.indexOf('ORDEN R');
+            const horaCIndex = headers.indexOf('HORA C');
+            
+            // Crear array con ruta y hora
+            const recorrido = [];
+            data.forEach(row => {
+                const origen = row[origenIndex] || '?';
+                const destino = row[destinoIndex] || '?';
+                const ordenR = row[ordenRIndex] || '';
+                // Usar ORDEN R si existe, si no usar ORIGEN-DESTINO
+                const ruta = ordenR || `${origen}-${destino}`;
+                const horaC = row[horaCIndex] || '--:--';
+                recorrido.push({ ruta, horaC, ordenR });
+            });
+            
+            // Ordenar por hora de más temprano a más tarde
+            recorrido.sort((a, b) => {
+                function horaAMinutos(horaStr) {
+                    if (!horaStr) return 0;
+                    const partes = horaStr.split(':');
+                    return (parseInt(partes[0]) || 0) * 60 + (parseInt(partes[1]) || 0);
+                }
+                return horaAMinutos(a.horaC) - horaAMinutos(b.horaC);
+            });
+            
+            let html = '';
+            recorrido.forEach(item => {
+                html += `
+                    <div class="recorrido-item">
+                        <span class="recorrido-ruta">${item.ruta}</span>
+                        <span class="recorrido-hora">⏰ ${item.horaC}</span>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
         }
         
         function renderTableCOND(data) {
@@ -1013,40 +1080,48 @@
                 return;
             }
             
-            const idIndex = headers.indexOf('ID');
-            const fechaEIndex = headers.indexOf('FECHA E');
-            const origenIndex = headers.indexOf('ORIGEN');
-            const destinoIndex = headers.indexOf('DESTINO');
-            const productoIndex = headers.indexOf('PRODUCTO');
-            const piezasIndex = headers.indexOf('# PIEZAS');
-            const fbeIndex = headers.indexOf('FBE');
-            const pesoIndex = headers.indexOf('PESO');
-            const vehiculoIndex = headers.indexOf('VEHICULO');
-            const ordenRIndex = headers.indexOf('ORDEN R');
-            const zonaEntregaIndex = headers.indexOf('Zona Entrega');
-            const contactoEntregaIndex = headers.indexOf('Contacto Entrega');
-            const horaCIndex = headers.indexOf('HORA C');
-            const horaDIndex = headers.indexOf('HORA D');
-            const observacionesIndex = headers.indexOf('OBSERVACIONES');
-            const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
+            // Obtener índices de todas las columnas por nombre (más seguro)
+            const getIndex = (colName) => {
+                const idx = headers.indexOf(colName);
+                return idx !== -1 ? idx : null;
+            };
+            
+            const idIdx = getIndex('ID');
+            const fechaEIdx = getIndex('FECHA E');
+            const origenIdx = getIndex('ORIGEN');
+            const destinoIdx = getIndex('DESTINO');
+            const productoIdx = getIndex('PRODUCTO');
+            const piezasIdx = getIndex('# PIEZAS');
+            const fbeIdx = getIndex('FBE');
+            const pesoIdx = getIndex('PESO');
+            const vehiculoIdx = getIndex('VEHICULO');
+            const ordenRIdx = getIndex('ORDEN R');
+            const zonaEntregaIdx = getIndex('Zona Entrega');
+            const contactoEntregaIdx = getIndex('Contacto Entrega');
+            const horaCIdx = getIndex('HORA C');
+            const horaDIdx = getIndex('HORA D');
+            const observacionesIdx = getIndex('OBSERVACIONES');
+            const estadoIdx = getIndex('ESTADO DE VIAJE');
             
             // Ordenar por HORA C (de más temprano a más tarde)
-            if (horaCIndex !== -1 && data.length > 0) {
+            if (horaCIdx !== null && data.length > 0) {
                 data.sort((a, b) => {
                     function horaAMinutos(horaStr) {
-                        if (!horaStr) return 0;
-                        horaStr = horaStr.trim();
-                        let partes = horaStr.split(':');
-                        if (partes.length !== 2) return 0;
+                        if (!horaStr || horaStr === '-') return 9999;
+                        const partes = horaStr.toString().split(':');
+                        if (partes.length !== 2) return 9999;
                         return (parseInt(partes[0]) || 0) * 60 + (parseInt(partes[1]) || 0);
                     }
-                    return horaAMinutos(a[horaCIndex]) - horaAMinutos(b[horaCIndex]);
+                    const horaA = a[horaCIdx] || '23:59';
+                    const horaB = b[horaCIdx] || '23:59';
+                    return horaAMinutos(horaA) - horaAMinutos(horaB);
                 });
             }
             
             let html = '<div style="overflow-x: auto; width: 100%;">';
-            html += '<table style="width: 100%; border-collapse: collapse; min-width: 1800px; font-size: 12px;">';
-            html += '<thead><tr>';
+            html += '<table style="width: 100%; border-collapse: collapse; min-width: 1600px; font-size: 12px;">';
+            html += '<thead>';
+            html += '<tr>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">VER</th>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ID</th>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">FECHA ENTREGA</th>';
@@ -1064,27 +1139,40 @@
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">HORA DESCARGUE</th>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">OBSERVACIONES</th>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ESTADO</th>';
-            html += '</tr></thead><tbody>';
+            html += '</tr>';
+            html += '</thead><tbody>';
             
             for (let i = 0; i < data.length; i++) {
                 const row = data[i];
                 
-                const idValue = (idIndex !== -1 && row[idIndex]) ? row[idIndex] : '-';
-                const fechaValue = (fechaEIndex !== -1 && row[fechaEIndex]) ? row[fechaEIndex] : '-';
-                const origenValue = (origenIndex !== -1 && row[origenIndex]) ? row[origenIndex] : '-';
-                const destinoValue = (destinoIndex !== -1 && row[destinoIndex]) ? row[destinoIndex] : '-';
-                const productoValue = (productoIndex !== -1 && row[productoIndex]) ? row[productoIndex] : '-';
-                const piezasValue = (piezasIndex !== -1 && row[piezasIndex]) ? formatNumber(parseFloat(row[piezasIndex]) || 0) : '0';
-                const fbeValue = (fbeIndex !== -1 && row[fbeIndex]) ? formatNumber(parseFloat(row[fbeIndex]) || 0) : '0';
-                const pesoValue = (pesoIndex !== -1 && row[pesoIndex]) ? formatNumber(parseFloat(row[pesoIndex]) || 0) : '0';
-                const vehiculoValue = (vehiculoIndex !== -1 && row[vehiculoIndex]) ? row[vehiculoIndex] : '-';
-                const ordenValue = (ordenRIndex !== -1 && row[ordenRIndex]) ? row[ordenRIndex] : '-';
-                const zonaValue = (zonaEntregaIndex !== -1 && row[zonaEntregaIndex]) ? row[zonaEntregaIndex] : '-';
-                const contactoValue = (contactoEntregaIndex !== -1 && row[contactoEntregaIndex]) ? row[contactoEntregaIndex] : '-';
-                const horaCValue = (horaCIndex !== -1 && row[horaCIndex]) ? row[horaCIndex] : '-';
-                const horaDValue = (horaDIndex !== -1 && row[horaDIndex]) ? row[horaDIndex] : '-';
-                const observacionesValue = (observacionesIndex !== -1 && row[observacionesIndex]) ? row[observacionesIndex] : '-';
-                const estadoValue = (estadoIndex !== -1 && row[estadoIndex]) ? row[estadoIndex] : '-';
+                // Función para obtener valor seguro
+                const getVal = (idx) => {
+                    if (idx === null) return '-';
+                    const val = row[idx];
+                    return (val !== undefined && val !== null && val.toString().trim() !== '') ? val : '-';
+                };
+                
+                const idValue = getVal(idIdx);
+                const fechaValue = getVal(fechaEIdx);
+                const origenValue = getVal(origenIdx);
+                const destinoValue = getVal(destinoIdx);
+                const productoValue = getVal(productoIdx);
+                const piezasValue = getVal(piezasIdx);
+                const piezasNum = parseFloat(piezasValue) || 0;
+                const fbeValue = getVal(fbeIdx);
+                const fbeNum = parseFloat(fbeValue) || 0;
+                const pesoValue = getVal(pesoIdx);
+                const pesoNum = parseFloat(pesoValue) || 0;
+                const vehiculoValue = getVal(vehiculoIdx);
+                const ordenValue = getVal(ordenRIdx);
+                const zonaValue = getVal(zonaEntregaIdx);
+                const contactoValue = getVal(contactoEntregaIdx);
+                const horaCValue = getVal(horaCIdx);
+                const horaDValue = getVal(horaDIdx);
+                let observacionesValue = getVal(observacionesIdx);
+                // Limpiar saltos de línea en observaciones
+                observacionesValue = observacionesValue.replace(/\n/g, ' ').replace(/\r/g, ' ');
+                const estadoValue = getVal(estadoIdx);
                 
                 html += '<tr>';
                 html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;"><button class="btn-ver" onclick="verDetalle(${i}, 'conductor')">👁️ VER</button></td>`;
@@ -1093,20 +1181,23 @@
                 html += `<td style="border: 1px solid #ddd; padding: 8px;">${origenValue}</td>`;
                 html += `<td style="border: 1px solid #ddd; padding: 8px;">${destinoValue}</td>`;
                 html += `<td style="border: 1px solid #ddd; padding: 8px;">${productoValue}</td>`;
-                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${piezasValue}</td>`;
-                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${fbeValue}</td>`;
-                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${pesoValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${formatNumber(piezasNum)}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${formatNumber(fbeNum)}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${formatNumber(pesoNum)}</td>`;
                 html += `<td style="border: 1px solid #ddd; padding: 8px;">${vehiculoValue}</td>`;
                 html += `<td style="border: 1px solid #ddd; padding: 8px;">${ordenValue}</td>`;
                 html += `<td style="border: 1px solid #ddd; padding: 8px;">${zonaValue}</td>`;
                 html += `<td style="border: 1px solid #ddd; padding: 8px;">${contactoValue}</td>`;
                 html += `<td style="border: 1px solid #ddd; padding: 8px;">${horaCValue}</td>`;
                 html += `<td style="border: 1px solid #ddd; padding: 8px;">${horaDValue}</td>`;
-                html += `<td style="border: 1px solid #ddd; padding: 8px; word-break: break-word; max-width: 200px;">${observacionesValue}</td>`;
+                html += `<td style="border: 1px solid #ddd; padding: 8px; word-break: break-word; max-width: 250px;">${observacionesValue}</td>`;
                 html += `<td style="border: 1px solid #ddd; padding: 8px;">${estadoValue}</td>`;
                 html += '</tr>';
             }
-            html += '</tbody></table></div>';
+            
+            html += '</tbody></table>';
+            html += '</div>';
+            
             container.innerHTML = html;
             window.conductorDataModal = data;
         }
