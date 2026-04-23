@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Logístico | Transporte</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* Login Panel */
+        .login-panel {
+            max-width: 450px;
+            margin: 100px auto;
+            background: white;
+            border-radius: 15px;
+            padding: 35px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .login-panel h2 {
+            color: #1a73e8;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .login-panel .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #1a73e8;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #1557b0;
+        }
+        
+        .error-msg {
+            background: #fee;
+            color: #c33;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        /* Dashboard Panel */
+        .dashboard-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f2f5;
+        }
+        
+        .header h2 {
+            color: #1a73e8;
+        }
+        
+        .user-info {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .user-info span {
+            background: #e8f0fe;
+            padding: 8px 15px;
+            border-radius: 20px;
+            color: #1a73e8;
+            font-weight: bold;
+        }
+        
+        .logout-btn {
+            width: auto;
+            padding: 8px 20px;
+            background: #dc3545;
+        }
+        
+        .logout-btn:hover {
+            background: #c82333;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-card h4 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .filters input, .filters select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid #eee;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #dee2e6;
+            position: sticky;
+            top: 0;
+        }
+        
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .badge-pendiente {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge-ruta {
+            background: #cfe2ff;
+            color: #084298;
+        }
+        
+        .badge-entregado {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+        
+        @media (max-width: 768px) {
+            .stats {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            th, td {
+                font-size: 11px;
+                padding: 6px;
+            }
+            
+            .filters {
+                flex-direction: column;
+            }
+            
+            .filters input, .filters select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Panel -->
+        <div id="loginPanel" class="login-panel">
+            <h2>🚛 Portal Logístico</h2>
+            <div class="subtitle">Ingrese sus credenciales de transportista</div>
+            
+            <div class="input-group">
+                <label>Código OTT</label>
+                <input type="text" id="ottInput" placeholder="Ej: MA, RZ, TL, OM" autocomplete="off">
+            </div>
+            
+            <div class="input-group">
+                <label>Contraseña</label>
+                <input type="password" id="passwordInput" placeholder="••••••">
+            </div>
+            
+            <button onclick="login()">🔐 Acceder al Portal</button>
+            <div id="loginError" class="error-msg" style="display:none;"></div>
+        </div>
+        
+        <!-- Dashboard Panel (oculto inicialmente) -->
+        <div id="dashboardPanel" class="dashboard-panel" style="display:none;">
+            <div class="header">
+                <h2>🚚 Portal de Transporte</h2>
+                <div class="user-info">
+                    <span id="ottDisplay"></span>
+                    <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <h4>Total Servicios</h4>
+                    <div class="number" id="totalServicios">0</div>
+                </div>
+                <div class="stat-card">
+                    <h4>📦 Total Piezas</h4>
+                    <div class="number" id="totalPiezas">0</div>
+                </div>
+                <div class="stat-card">
+                    <h4>⚖️ Peso Total (kg)</h4>
+                    <div class="number" id="totalPeso">0</div>
+                </div>
+            </div>
+            
+            <div class="filters">
+                <input type="text" id="filterConductor" placeholder="🔍 Filtrar por conductor" onkeyup="filterTable()">
+                <input type="date" id="filterFecha" onchange="filterTable()">
+                <select id="filterEstado" onchange="filterTable()">
+                    <option value="">📋 Todos los estados</option>
+                    <option value="Pendiente">⏳ Pendiente</option>
+                    <option value="En ruta">🚛 En ruta</option>
+                    <option value="Entregado">✅ Entregado</option>
+                </select>
+                <button onclick="exportToCSV()" style="width:auto; background:#28a745;">📊 Exportar a Excel</button>
+            </div>
+            
+            <div class="table-wrapper">
+                <div id="tableContainer">Cargando datos...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // URLs de tus hojas publicadas
+        const DATOS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?output=csv';
+        const USUARIOS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=1481764869&output=csv';
+        
+        let allData = [];
+        let headers = [];
+        let currentOTT = '';
+        
+        // Función para parsear CSV (maneja comillas y comas)
+        function parseCSV(csvText) {
+            const rows = [];
+            const regex = /(?:,|\n|^)("(?:(?:"")*(?:[^"][^"]*)*)"|[^",\n][^,\n]*|(?:\n|$))/g;
+            let match;
+            let currentRow = [];
+            
+            const lines = csvText.split(/\r?\n/);
+            for (let line of lines) {
+                if (line.trim() === '') continue;
+                const row = [];
+                let inQuotes = false;
+                let currentCell = '';
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        row.push(currentCell.trim());
+                        currentCell = '';
+                    } else {
+                        currentCell += char;
+                    }
+                }
+                row.push(currentCell.trim());
+                rows.push(row);
+            }
+            return rows;
+        }
+        
+        // Función para cargar y validar usuarios
+        async function loadUsuarios() {
+            try {
+                const response = await fetch(USUARIOS_URL);
+                const csvText = await response.text();
+                const data = parseCSV(csvText);
+                
+                if (data.length === 0) return {};
+                
+                const usuarios = {};
+                // Asumiendo que la primera fila son encabezados: SIGLA, CONTRASEÑA
+                for (let i = 1; i < data.length; i++) {
+                    if (data[i][0] && data[i][1]) {
+                        usuarios[data[i][0].trim().toUpperCase()] = data[i][1].trim();
+                    }
+                }
+                return usuarios;
+            } catch (error) {
+                console.error('Error cargando usuarios:', error);
+                return {};
+            }
+        }
+        
+        // Función para cargar datos de la hoja Datos
+        async function loadDatos() {
+            try {
+                const response = await fetch(DATOS_URL);
+                const csvText = await response.text();
+                const data = parseCSV(csvText);
+                
+                if (data.length === 0) return { headers: [], rows: [] };
+                
+                return {
+                    headers: data[0],
+                    rows: data.slice(1)
+                };
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+                return { headers: [], rows: [] };
+            }
+        }
+        
+        // Login
+        async function login() {
+            const ott = document.getElementById('ottInput').value.trim().toUpperCase();
+            const password = document.getElementById('passwordInput').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            if (!ott || !password) {
+                errorDiv.style.display = 'block';
+                errorDiv.innerText = '❌ Por favor ingrese su código OTT y contraseña';
+                return;
+            }
+            
+            errorDiv.style.display = 'block';
+            errorDiv.innerText = '⏳ Verificando credenciales...';
+            errorDiv.style.background = '#e3f2fd';
+            errorDiv.style.color = '#1976d2';
+            
+            // Cargar usuarios y validar
+            const usuarios = await loadUsuarios();
+            
+            if (!usuarios[ott] || usuarios[ott] !== password) {
+                errorDiv.style.display = 'block';
+                errorDiv.innerText = '❌ Código OTT o contraseña incorrectos';
+                errorDiv.style.background = '#fee';
+                errorDiv.style.color = '#c33';
+                return;
+            }
+            
+            // Login exitoso
+            currentOTT = ott;
+            errorDiv.style.display = 'none';
+            
+            // Cargar y mostrar datos
+            await loadAndDisplayData(ott);
+            
+            // Mostrar dashboard
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('dashboardPanel').style.display = 'block';
+            document.getElementById('ottDisplay').innerText = ott;
+        }
+        
+        // Cargar y filtrar datos por OTT
+        async function loadAndDisplayData(ott) {
+            const container = document.getElementById('tableContainer');
+            container.innerHTML = '<div class="loading">⏳ Cargando servicios...</div>';
+            
+            const { headers: allHeaders, rows } = await loadDatos();
+            headers = allHeaders;
+            
+            if (rows.length === 0) {
+                container.innerHTML = '<div class="loading">⚠️ No hay datos disponibles</div>';
+                return;
+            }
+            
+            // Encontrar el índice de la columna OTT
+            const ottIndex = headers.indexOf('OTT');
+            
+            if (ottIndex === -1) {
+                container.innerHTML = '<div class="loading">⚠️ No se encontró la columna OTT en los datos</div>';
+                return;
+            }
+            
+            // Filtrar filas por OTT
+            allData = rows.filter(row => {
+                return row[ottIndex] && row[ottIndex].trim().toUpperCase() === ott;
+            });
+            
+            if (allData.length === 0) {
+                container.innerHTML = `<div class="loading">⚠️ No hay servicios asignados para la OTT ${ott}</div>`;
+                document.getElementById('totalServicios').innerText = '0';
+                document.getElementById('totalPiezas').innerText = '0';
+                document.getElementById('totalPeso').innerText = '0';
+                return;
+            }
+            
+            // Actualizar estadísticas
+            updateStats();
+            
+            // Renderizar tabla
+            renderTable(allData);
+        }
+        
+        // Actualizar tarjetas de estadísticas
+        function updateStats() {
+            document.getElementById('totalServicios').innerText = allData.length;
+            
+            // Buscar índices de columnas
+            const piezasIndex = headers.indexOf('# PIEZAS');
+            const pesoIndex = headers.indexOf('PESO');
+            
+            let totalPiezas = 0;
+            let totalPeso = 0;
+            
+            allData.forEach(row => {
+                if (piezasIndex !== -1 && row[piezasIndex]) {
+                    totalPiezas += parseInt(row[piezasIndex]) || 0;
+                }
+                if (pesoIndex !== -1 && row[pesoIndex]) {
+                    totalPeso += parseFloat(row[pesoIndex]) || 0;
+                }
+            });
+            
+            document.getElementById('totalPiezas').innerText = totalPiezas.toLocaleString();
+            document.getElementById('totalPeso').innerText = totalPeso.toFixed(2);
+        }
+        
+        // Renderizar tabla con filtros
+        function renderTable(data) {
+            const container = document.getElementById('tableContainer');
+            
+            // Obtener filtros
+            const conductorFilter = document.getElementById('filterConductor')?.value.toLowerCase() || '';
+            const fechaFilter = document.getElementById('filterFecha')?.value || '';
+            const estadoFilter = document.getElementById('filterEstado')?.value || '';
+            
+            // Buscar índices
+            const conductorIndex = headers.indexOf('CONDUCTOR');
+            const fechaIndex = headers.indexOf('FECHA S');
+            const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
+            
+            // Aplicar filtros
+            let filteredData = data;
+            
+            if (conductorFilter) {
+                filteredData = filteredData.filter(row => {
+                    if (conductorIndex === -1) return true;
+                    const conductor = row[conductorIndex] ? row[conductorIndex].toLowerCase() : '';
+                    return conductor.includes(conductorFilter);
+                });
+            }
+            
+            if (fechaFilter) {
+                filteredData = filteredData.filter(row => {
+                    if (fechaIndex === -1) return true;
+                    return row[fechaIndex] === fechaFilter;
+                });
+            }
+            
+            if (estadoFilter) {
+                filteredData = filteredData.filter(row => {
+                    if (estadoIndex === -1) return true;
+                    return row[estadoIndex] === estadoFilter;
+                });
+            }
+            
+            if (filteredData.length === 0) {
+                container.innerHTML = '<div class="loading">🔍 No hay servicios que coincidan con los filtros</div>';
+                return;
+            }
+            
+            // Construir tabla HTML
+            let html = '<table><thead><tr>';
+            
+            // Mostrar solo columnas relevantes (puedes personalizar)
+            const columnsToShow = [
+                'FECHA S', 'SOLICITANTE', 'ORIGEN', 'DESTINO', 
+                'PRODUCTO', '# PIEZAS', 'PESO', 'CONDUCTOR', 
+                'VEHICULO', 'ESTADO DE VIAJE', 'HORA C', 'HORA D'
+            ];
+            
+            const indicesToShow = columnsToShow.map(col => headers.indexOf(col)).filter(idx => idx !== -1);
+            
+            // Encabezados
+            indicesToShow.forEach(idx => {
+                html += `<th>${headers[idx]}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            // Filas
+            filteredData.forEach(row => {
+                html += '<tr>';
+                indicesToShow.forEach(idx => {
+                    let value = row[idx] || '-';
+                    // Aplicar badges según estado
+                    if (headers[idx] === 'ESTADO DE VIAJE') {
+                        let badgeClass = '';
+                        if (value === 'Pendiente') badgeClass = 'badge-pendiente';
+                        else if (value === 'En ruta') badgeClass = 'badge-ruta';
+                        else if (value === 'Entregado') badgeClass = 'badge-entregado';
+                        html += `<td><span class="badge ${badgeClass}">${value}</span></td>`;
+                    } else {
+                        html += `<td>${value}</td>`;
+                    }
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+        
+        // Función para filtrar tabla
+        function filterTable() {
+            if (allData.length > 0) {
+                renderTable(allData);
+            }
+        }
+        
+        // Exportar a CSV
+        function exportToCSV() {
+            if (allData.length === 0) return;
+            
+            let csvContent = headers.join(',') + '\n';
+            allData.forEach(row => {
+                const escapedRow = row.map(cell => {
+                    if (cell && (cell.includes(',') || cell.includes('"'))) {
+                        return `"${cell.replace(/"/g, '""')}"`;
+                    }
+                    return cell || '';
+                });
+                csvContent += escapedRow.join(',') + '\n';
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.setAttribute('download', `servicios_${currentOTT}_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Logout
+        function logout() {
+            document.getElementById('loginPanel').style.display = 'block';
+            document.getElementById('dashboardPanel').style.display = 'none';
+            document.getElementById('ottInput').value = '';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('filterConductor').value = '';
+            document.getElementById('filterFecha').value = '';
+            document.getElementById('filterEstado').value = '';
+            allData = [];
+        }
+    </script>
+</body>
+</html>
