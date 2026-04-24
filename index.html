@@ -461,23 +461,32 @@
                 <div class="stat-card"><h4>📋 Total Servicios</h4><div class="number" id="totalServiciosOTT">0</div></div>
                 <div class="stat-card"><h4>📦 Total Piezas</h4><div class="number" id="totalPiezasOTT">0</div></div>
                 <div class="stat-card"><h4>⚖️ Total FBE</h4><div class="number" id="totalFBEOTT">0</div></div>
-                <div class="stat-card"><h4>💰 Total Tarifa</h4><div class="number" id="totalTarifaOTT">0</div></div>
+                <div class="stat-card"><h4>💰 Total Fletes</h4><div class="number" id="totalTarifaOTT">0</div></div>
             </div>
-            
             <div id="impuestosSection" class="impuestos-section" style="display:none;">
-                <div class="impuestos-title">💰 IMPUESTOS</div>
-                <div class="impuesto-card-unificado">
-                    <div class="impuesto-item">
-                        <div class="impuesto-label">Retención 1%</div>
-                        <div class="impuesto-value" id="retencionValue">$0</div>
+                <div class="impuestos-title">💰 FACTURAR A OTT-F</div>
+                <div class="impuesto-card-unificado" style="flex-direction: column; gap: 15px;">
+                    <div class="impuesto-item" style="border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 15px;">
+                        <div class="impuesto-label">Total a Facturar (Flete - 7%)</div>
+                        <div class="impuesto-value" id="totalFacturarValue" style="font-size: 32px;">$0</div>
                     </div>
-                    <div class="impuesto-item">
-                        <div class="impuesto-label">ReteICA (0.7%)</div>
-                        <div class="impuesto-value" id="reteicaValue">$0</div>
+                    <div style="display: flex; justify-content: space-around; gap: 20px; flex-wrap: wrap;">
+                        <div class="impuesto-item">
+                            <div class="impuesto-label">Retención 1%</div>
+                            <div class="impuesto-value" id="retencionValue">$0</div>
+                        </div>
+                        <div class="impuesto-item">
+                            <div class="impuesto-label">ReteICA (0.7%)</div>
+                            <div class="impuesto-value" id="reteicaValue">$0</div>
+                        </div>
+                    </div>
+                    <div class="impuesto-item" style="border-top: 1px solid rgba(255,255,255,0.2); margin-top: 10px; padding-top: 15px;">
+                        <div class="impuesto-label" style="font-size: 18px;">💰 TOTAL INGRESO</div>
+                        <div class="impuesto-value" id="totalIngresoValue" style="font-size: 32px;">$0</div>
                     </div>
                 </div>
             </div>
-            
+    
             <div class="subtotal-despacho" style="margin-bottom:20px; background:#f8f9fa;">
                 <h4>👨‍✈️ Resumen por Conductor</h4>
                 <div id="resumenConductorOTT" class="resumen-grid"></div>
@@ -920,11 +929,25 @@
             document.getElementById('subtotalFBEOTT').innerText = formatNumber(totalFBE);
             document.getElementById('subtotalTarifaOTT').innerHTML = '$ ' + formatNumber(totalTarifa);
             
+            // Calcular impuestos si aplica
+            // Calcular impuestos si aplica
             if (aplicaImpuestos) {
-                const retencion = totalTarifa * 0.01;
-                const reteica = totalTarifa * 0.007;
-                document.getElementById('retencionValue').innerHTML = '$ ' + formatNumber(retencion);
-                document.getElementById('reteicaValue').innerHTML = '$ ' + formatNumber(reteica);
+                const totalFlete = totalTarifa;
+                const descuento7 = totalFlete * 0.07;
+                const totalFacturar = totalFlete - descuento7;
+                const retencion = totalFacturar * 0.01;
+                const reteica = totalFacturar * 0.007;
+                
+                // Redondear a enteros (sin decimales)
+                const totalFacturarInt = Math.round(totalFacturar);
+                const retencionInt = Math.round(retencion);
+                const reteicaInt = Math.round(reteica);
+                const totalIngresoInt = totalFacturarInt - retencionInt - reteicaInt;
+                
+                document.getElementById('totalFacturarValue').innerHTML = '$ ' + formatNumber(totalFacturarInt);
+                document.getElementById('retencionValue').innerHTML = '$ ' + formatNumber(retencionInt);
+                document.getElementById('reteicaValue').innerHTML = '$ ' + formatNumber(reteicaInt);
+                document.getElementById('totalIngresoValue').innerHTML = '$ ' + formatNumber(totalIngresoInt);
             }
             
             const resConductor = {};
