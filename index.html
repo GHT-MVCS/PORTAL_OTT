@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Portal Logístico | GHT-MVCS</title>
     <style>
+        /* ... (todo tu CSS se mantiene igual) ... */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -221,7 +222,6 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
         
-        /* Cuadro RECORRIDO */
         .recorrido-card {
             background: #f8f9fa;
             border-radius: 10px;
@@ -243,26 +243,6 @@
             flex-direction: column;
             gap: 8px;
         }
-        .recorrido-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #e0e0e0;
-        }
-        .recorrido-ruta {
-            font-weight: 500;
-            color: #333;
-        }
-        .recorrido-hora {
-            font-family: monospace;
-            font-size: 14px;
-            font-weight: bold;
-            color: #1a73e8;
-        }
-        /* RECORRIDO - Estilo de columnas */
         .recorrido-item-grid {
             display: grid;
             grid-template-columns: 0.3fr 1fr 1fr 1.5fr 0.8fr;
@@ -395,6 +375,12 @@
             .modal-field-label { width: 35%; font-size: 12px; }
             .modal-field-value { width: 65%; font-size: 12px; }
         }
+        @keyframes fadeInOut {
+        0% { opacity: 0; transform: translateX(20px); }
+        15% { opacity: 1; transform: translateX(0); }
+        85% { opacity: 1; transform: translateX(0); }
+        100% { opacity: 0; transform: translateX(20px); }
+    }
     </style>
 </head>
 <body>
@@ -511,17 +497,28 @@
             </div>
         </div>
         
-        <div id="dashboardPanelCONDUCTOR" class="dashboard-panel" style="display:none;">
-            <div class="header">
-                <h2>🧑‍✈️ Portal de Conductor</h2>
-                <div class="user-info">
-                    <span id="userDisplayCOND"></span>
-                    <span id="totalRegistrosCOND"></span>
-                    <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
-                </div>
+<div id="dashboardPanelCONDUCTOR" class="dashboard-panel" style="display:none;">
+    <div class="header">
+        <h2>🧑‍✈️ Portal de Conductor</h2>
+        <div class="user-info">
+            <span id="userDisplayCOND"></span>
+            <span id="totalRegistrosCOND"></span>
+            <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
+        </div>
+        </div>
+        
+        <!-- NUEVO: Botón Actualizar con indicador de fecha/hora -->
+        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-bottom: 15px;">
+            <div id="ultimaActualizacionCOND" style="font-size: 11px; color: #666; background: #f0f0f0; padding: 6px 12px; border-radius: 20px;">
+                📅 Última actualización: --
             </div>
-            
-            <div class="filters-bar">
+            <button onclick="actualizarDatosConductor()" style="width: auto; padding: 8px 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                🔄 ACTUALIZAR DATOS
+            </button>
+        </div>
+        
+        <div class="filters-bar">
+
                 <div class="filters-row">
                     <div class="filter-item">
                         <label>🚛 VEHÍCULO</label>
@@ -558,10 +555,10 @@
                 <div><span id="subtotalServiciosCOND">0</span> servicios | <span id="subtotalPiezasCOND">0</span> piezas | <span id="subtotalFBECOND">0</span> FBE</div>
             </div>
             
-                <!-- CUADRO RECORRIDO -->
             <div class="recorrido-card" id="recorridoCard">
                 <div class="recorrido-title">🗺️ RECORRIDO</div>
                 <div class="recorrido-header">
+                    <span>VER</span>
                     <span>ORIGEN</span>
                     <span>DESTINO</span>
                     <span>RECORRIDO</span>
@@ -585,9 +582,39 @@
     </div>
 
     <script>
-        const DATOS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=161433051&output=csv';
-        const USUARIOS_OTT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=1481764869&output=csv';
-        const USUARIOS_CONDUCTOR_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQKKvBRepAKkOh3swc2jOlJYfCETEoBAOF3nvtRYAq_d94LlBiutdsKwurP7lfIHPD4_ftIGHiqujpw/pub?gid=1400391866&output=csv';
+        // ==================== CONFIGURACIÓN PROTEGIDA ====================
+        // CAMBIA ESTA URL POR LA DE TU APPS SCRIPT
+        const PROXY_URL = 'https://script.google.com/macros/s/AKfycbyDqEXaQNlON4kvLbuUjbfoDd8pyytYJ5K9BBYkiPEE07yhZIFnUIBJKwAXQNT7NN4Log/exec';
+        const SECRET_KEY = 'MVCS2024Seguro123';
+        
+        // Variables para las URLs cargadas desde el proxy
+        let DATOS_URL = '';
+        let USUARIOS_OTT_URL = '';
+        let USUARIOS_CONDUCTOR_URL = '';
+        
+        // Función para cargar configuración desde el Apps Script protegido
+        async function cargarConfiguracionProtegida() {
+            try {
+                console.log('🔄 Cargando configuración desde proxy...');
+                const response = await fetch(`${PROXY_URL}?key=${SECRET_KEY}`);
+                const config = await response.json();
+                
+                if (config.error) {
+                    console.error('Error:', config.message);
+                    return false;
+                }
+                
+                DATOS_URL = config.DATOS_URL;
+                USUARIOS_OTT_URL = config.USUARIOS_OTT_URL;
+                USUARIOS_CONDUCTOR_URL = config.USUARIOS_CONDUCTOR_URL;
+                
+                console.log('✅ Configuración cargada correctamente');
+                return true;
+            } catch (error) {
+                console.error('❌ Error cargando configuración:', error);
+                return false;
+            }
+        }
         
         let headers = [];
         let currentUser = '';
@@ -619,7 +646,6 @@
             document.getElementById('loginError').style.display = 'none';
         }
 
-        // PARSE CSV MEJORADO - Maneja saltos de línea dentro de comillas
         function parseCSV(csvText) {
             const rows = [];
             let currentRow = [];
@@ -634,7 +660,6 @@
                     inQuotes = !inQuotes;
                     currentCell += char;
                 } else if (char === ',' && !inQuotes) {
-                    // Limpiar comillas del inicio y final
                     let cleanCell = currentCell.trim();
                     if (cleanCell.startsWith('"') && cleanCell.endsWith('"')) {
                         cleanCell = cleanCell.substring(1, cleanCell.length - 1);
@@ -674,6 +699,7 @@
             
             return rows;
         }
+        
         async function loadUsuariosOTT() {
             try {
                 const response = await fetch(USUARIOS_OTT_URL);
@@ -741,6 +767,16 @@
             errorDiv.innerText = '⏳ Verificando...';
             errorDiv.style.background = '#e3f2fd';
             errorDiv.style.color = '#1976d2';
+            
+            // Cargar configuración protegida primero
+            const configOk = await cargarConfiguracionProtegida();
+            if (!configOk) {
+                errorDiv.style.display = 'block';
+                errorDiv.innerText = '❌ Error al cargar configuración. Verifica tu conexión.';
+                errorDiv.style.background = '#fee';
+                errorDiv.style.color = '#c33';
+                return;
+            }
             
             let loginOk = false;
             
@@ -814,14 +850,30 @@
                 const nombreCompleto = conductorData[0][conductorNombreIndex] || username;
                 
                 cargarListasCOND();
-                // Filtrar por fecha actual por defecto
                 document.getElementById('filterFechaDesdeCOND').value = hoy;
                 document.getElementById('filterFechaHastaCOND').value = hoy;
                 aplicarFiltrosCOND();
                 
                 document.getElementById('loginPanel').style.display = 'none';
                 document.getElementById('dashboardPanelCONDUCTOR').style.display = 'block';
-                document.getElementById('userDisplayCOND').innerText = `Conductor: ${nombreCompleto}`;
+                document.getElementById('userDisplayCOND').innerHTML = `Conductor: ${nombreCompleto}`;
+                document.getElementById('dashboardPanelCONDUCTOR').style.display = 'block';
+                document.getElementById('userDisplayCOND').innerHTML = `Conductor: ${nombreCompleto}`;
+
+                // Agregar fecha/hora inicial al dashboard de conductor
+                const ahora = new Date();
+                const fechaHora = ahora.toLocaleString('es-CO', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                const updateDiv = document.getElementById('ultimaActualizacionCOND');
+                if (updateDiv) {
+                    updateDiv.innerHTML = `📅 Última actualización: ${fechaHora}`;
+                }
             }
         }
         
@@ -929,8 +981,6 @@
             document.getElementById('subtotalFBEOTT').innerText = formatNumber(totalFBE);
             document.getElementById('subtotalTarifaOTT').innerHTML = '$ ' + formatNumber(totalTarifa);
             
-            // Calcular impuestos si aplica
-            // Calcular impuestos si aplica
             if (aplicaImpuestos) {
                 const totalFlete = totalTarifa;
                 const descuento7 = totalFlete * 0.07;
@@ -938,7 +988,6 @@
                 const retencion = totalFacturar * 0.01;
                 const reteica = totalFacturar * 0.007;
                 
-                // Redondear a enteros (sin decimales)
                 const totalFacturarInt = Math.round(totalFacturar);
                 const retencionInt = Math.round(retencion);
                 const reteicaInt = Math.round(reteica);
@@ -1001,45 +1050,6 @@
             renderTableOTT(ottFilteredData);
         }
         
-        function actualizarDashboardCOND() {
-            const piezasIndex = headers.indexOf('# PIEZAS');
-            const fbeIndex = headers.indexOf('FBE');
-            
-            let totalServicios = conductorFilteredData.length;
-            let totalPiezas = 0, totalFBE = 0;
-            
-            conductorFilteredData.forEach(row => {
-                totalPiezas += parseFloat(row[piezasIndex]) || 0;
-                totalFBE += parseFloat(row[fbeIndex]) || 0;
-            });
-            
-            document.getElementById('totalServiciosCOND').innerText = formatNumber(totalServicios);
-            document.getElementById('totalCarguesCOND').innerText = formatNumber(totalServicios);
-            document.getElementById('totalPiezasCOND').innerText = formatNumber(totalPiezas);
-            document.getElementById('totalFBECOND').innerText = formatNumber(totalFBE);
-            document.getElementById('totalRegistrosCOND').innerHTML = `📊 ${formatNumber(totalServicios)} Servicios`;
-            document.getElementById('subtotalServiciosCOND').innerText = formatNumber(totalServicios);
-            document.getElementById('subtotalPiezasCOND').innerText = formatNumber(totalPiezas);
-            document.getElementById('subtotalFBECOND').innerText = formatNumber(totalFBE);
-            
-            // Ordenar por HORA C antes de renderizar
-            const horaCIndex = headers.indexOf('HORA C');
-            if (horaCIndex !== -1 && conductorFilteredData.length > 0) {
-                conductorFilteredData.sort((a, b) => {
-                    function horaAMinutos(horaStr) {
-                        if (!horaStr || horaStr === '-') return 9999;
-                        const partes = horaStr.split(':');
-                        if (partes.length !== 2) return 9999;
-                        return (parseInt(partes[0]) || 0) * 60 + (parseInt(partes[1]) || 0);
-                    }
-                    return horaAMinutos(a[horaCIndex]) - horaAMinutos(b[horaCIndex]);
-                });
-            }
-            
-            renderTableCOND(conductorFilteredData);
-            actualizarRecorrido(conductorFilteredData);
-        }
-        
         function renderTableOTT(data) {
             const container = document.getElementById('tableContainerOTT');
             if (data.length === 0) {
@@ -1062,23 +1072,9 @@
             const tipoViajeIndex = headers.indexOf('TIPO DE VIAJE');
             const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
             
-            // Ordenar los datos por FECHA E (opcional)
-            if (fechaEIndex !== -1 && data.length > 0) {
-                data.sort((a, b) => {
-                    function fechaANumero(fechaStr) {
-                        if (!fechaStr) return 0;
-                        const partes = fechaStr.split('/');
-                        if (partes.length !== 3) return 0;
-                        return parseInt(partes[2] + partes[1] + partes[0]);
-                    }
-                    return fechaANumero(a[fechaEIndex]) - fechaANumero(b[fechaEIndex]);
-                });
-            }
-            
             let html = '<div style="overflow-x: auto; width: 100%;">';
             html += '<table style="width: 100%; border-collapse: collapse; min-width: 1200px; font-size: 12px;">';
-            html += '<thead>';
-            html += '<tr>';
+            html += '<thead><tr>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">VER</th>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ID</th>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ORIGEN</th>';
@@ -1094,8 +1090,7 @@
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">TARIFA</th>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">TIPO VIAJE</th>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ESTADO</th>';
-            html += '</tr>';
-            html += '</thead><tbody>';
+            html += '</tr></thead><tbody>';
             
             for (let i = 0; i < data.length; i++) {
                 const row = data[i];
@@ -1143,9 +1138,7 @@
                 html += '</tr>';
             }
             
-            html += '</tbody></table>';
-            html += '</div>';
-            
+            html += '</tbody></table></div>';
             container.innerHTML = html;
             window.ottDataModal = data;
         }
@@ -1236,6 +1229,19 @@
             document.getElementById('subtotalPiezasCOND').innerText = formatNumber(totalPiezas);
             document.getElementById('subtotalFBECOND').innerText = formatNumber(totalFBE);
             
+            const horaCIndex = headers.indexOf('HORA C');
+            if (horaCIndex !== -1 && conductorFilteredData.length > 0) {
+                conductorFilteredData.sort((a, b) => {
+                    function horaAMinutos(horaStr) {
+                        if (!horaStr || horaStr === '-') return 9999;
+                        const partes = horaStr.split(':');
+                        if (partes.length !== 2) return 9999;
+                        return (parseInt(partes[0]) || 0) * 60 + (parseInt(partes[1]) || 0);
+                    }
+                    return horaAMinutos(a[horaCIndex]) - horaAMinutos(b[horaCIndex]);
+                });
+            }
+            
             renderTableCOND(conductorFilteredData);
             actualizarRecorrido(conductorFilteredData);
         }
@@ -1285,6 +1291,7 @@
             });
             container.innerHTML = html;
         }
+        
         function renderTableCOND(data) {
             const container = document.getElementById('tableContainerCOND');
             if (data.length === 0) {
@@ -1292,7 +1299,6 @@
                 return;
             }
             
-            // Obtener índices de todas las columnas por nombre (más seguro)
             const getIndex = (colName) => {
                 const idx = headers.indexOf(colName);
                 return idx !== -1 ? idx : null;
@@ -1315,25 +1321,9 @@
             const observacionesIdx = getIndex('OBSERVACIONES');
             const estadoIdx = getIndex('ESTADO DE VIAJE');
             
-            // Ordenar por HORA C (de más temprano a más tarde)
-            if (horaCIdx !== null && data.length > 0) {
-                data.sort((a, b) => {
-                    function horaAMinutos(horaStr) {
-                        if (!horaStr || horaStr === '-') return 9999;
-                        const partes = horaStr.toString().split(':');
-                        if (partes.length !== 2) return 9999;
-                        return (parseInt(partes[0]) || 0) * 60 + (parseInt(partes[1]) || 0);
-                    }
-                    const horaA = a[horaCIdx] || '23:59';
-                    const horaB = b[horaCIdx] || '23:59';
-                    return horaAMinutos(horaA) - horaAMinutos(horaB);
-                });
-            }
-            
             let html = '<div style="overflow-x: auto; width: 100%;">';
             html += '<table style="width: 100%; border-collapse: collapse; min-width: 1600px; font-size: 12px;">';
-            html += '<thead>';
-            html += '<tr>';
+            html += '<thead><tr>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">VER</th>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ID</th>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">FECHA ENTREGA</th>';
@@ -1351,13 +1341,11 @@
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">HORA DESCARGUE</th>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">OBSERVACIONES</th>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ESTADO</th>';
-            html += '</tr>';
-            html += '</thead><tbody>';
+            html += '</tr></thead><tbody>';
             
             for (let i = 0; i < data.length; i++) {
                 const row = data[i];
                 
-                // Función para obtener valor seguro
                 const getVal = (idx) => {
                     if (idx === null) return '-';
                     const val = row[idx];
@@ -1382,7 +1370,6 @@
                 const horaCValue = getVal(horaCIdx);
                 const horaDValue = getVal(horaDIdx);
                 let observacionesValue = getVal(observacionesIdx);
-                // Limpiar saltos de línea en observaciones
                 observacionesValue = observacionesValue.replace(/\n/g, ' ').replace(/\r/g, ' ');
                 const estadoValue = getVal(estadoIdx);
                 
@@ -1407,9 +1394,7 @@
                 html += '</tr>';
             }
             
-            html += '</tbody></table>';
-            html += '</div>';
-            
+            html += '</tbody></table></div>';
             container.innerHTML = html;
             window.conductorDataModal = data;
         }
@@ -1421,7 +1406,6 @@
             const row = data[rowIndex];
             const modalBody = document.getElementById('modalBody');
             
-            // Columnas específicas para mostrar en el modal (igual que la tabla CONDUCTOR)
             const columnasMostrar = [
                 { nombre: 'ID', label: 'ID' },
                 { nombre: 'FECHA E', label: 'FECHA ENTREGA' },
@@ -1470,6 +1454,78 @@
             document.getElementById('userInput').value = '';
             document.getElementById('passwordInput').value = '';
         }
+
+        // ==================== FUNCIÓN ACTUALIZAR DATOS CONDUCTOR ====================
+        async function actualizarDatosConductor() {
+            const btnActualizar = document.querySelector('#dashboardPanelCONDUCTOR button[onclick="actualizarDatosConductor()"]');
+            const textoOriginal = btnActualizar.innerHTML;
+            btnActualizar.innerHTML = '⏳ Actualizando...';
+            btnActualizar.disabled = true;
+            
+            try {
+                // Recargar datos desde el origen
+                const { headers: allHeaders, rows } = await loadDatos();
+                headers = allHeaders;
+                
+                const conductorUIndex = headers.indexOf('CONDUCTORU');
+                const conductorNombreIndex = headers.indexOf('CONDUCTOR');
+                
+                if (conductorUIndex === -1) {
+                    alert('No se encontró columna CONDUCTORU');
+                    return;
+                }
+                
+                // Filtrar datos para el conductor actual
+                conductorData = rows.filter(row => (row[conductorUIndex] || '').trim().toUpperCase() === currentUser);
+                
+                if (conductorData.length === 0) {
+                    alert(`No hay servicios para el conductor ${currentUser}`);
+                    return;
+                }
+                
+                // Recargar listas de filtros
+                cargarListasCOND();
+                
+                // Re-aplicar filtros actuales
+                aplicarFiltrosCOND();
+                
+                // Actualizar fecha y hora de la última actualización
+                const ahora = new Date();
+                const fechaHora = ahora.toLocaleString('es-CO', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                const updateDiv = document.getElementById('ultimaActualizacionCOND');
+                if (updateDiv) {
+                    updateDiv.innerHTML = `📅 Última actualización: ${fechaHora}`;
+                }
+                
+                // Mostrar mensaje de éxito
+                const toast = document.createElement('div');
+                toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#28a745;color:white;padding:12px 20px;border-radius:8px;z-index:9999;animation:fadeInOut 2s ease';
+                toast.innerHTML = '✅ Datos actualizados correctamente';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+                
+            } catch (error) {
+                console.error('Error actualizando datos:', error);
+                alert('❌ Error al actualizar los datos: ' + error.message);
+            } finally {
+                btnActualizar.innerHTML = textoOriginal;
+                btnActualizar.disabled = false;
+            }
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        document.getElementById('userInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') login(); });
+        document.getElementById('passwordInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') login(); });
+
+        setRole('ott');
         
         document.getElementById('userInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') login(); });
         document.getElementById('passwordInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') login(); });
