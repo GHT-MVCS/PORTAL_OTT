@@ -162,20 +162,22 @@
             margin-bottom: 30px;
         }
         .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0f766e 0%, #2563eb 100%);
             color: white;
             padding: 20px;
             border-radius: 10px;
             text-align: center;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
         }
         .stat-card h4 { font-size: 14px; opacity: 0.9; margin-bottom: 10px; }
         .stat-card .number { font-size: 28px; font-weight: bold; }
         
         .impuestos-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0f766e 0%, #2563eb 100%);
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 30px;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
         }
         .impuestos-title {
             font-size: 18px;
@@ -214,12 +216,26 @@
         .subtotal-despacho h4 { color: #1a73e8; font-size: 16px; }
         .subtotal-despacho span { font-weight: bold; font-size: 18px; color: #333; }
         
-        .resumen-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+        .resumen-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 10px;
+            width: 100%;
+        }
         .resumen-card {
-            background: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid #dbe4f0;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+            font-size: 12px;
+            line-height: 1.35;
+        }
+        .resumen-card strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #0f172a;
+            font-size: 12px;
         }
         
         .recorrido-card {
@@ -253,18 +269,19 @@
             border: 1px solid #e0e0e0;
             align-items: center;
             text-align: center;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
         }
         .recorrido-header {
             display: grid;
             grid-template-columns: 0.3fr 1fr 1fr 1.5fr 0.8fr;
             gap: 8px;
             padding: 8px 12px;
-            background: #e8f0fe;
+            background: #e0f2fe;
             border-radius: 8px;
             margin-bottom: 10px;
             font-size: 11px;
             font-weight: bold;
-            color: #1a73e8;
+            color: #0f766e;
             text-align: center;
         }
         .recorrido-col-hora {
@@ -300,7 +317,7 @@
         .loading { text-align: center; padding: 20px; color: #666; }
         
         .btn-ver {
-            background: #1a73e8;
+            background: linear-gradient(135deg, #0f766e 0%, #2563eb 100%);
             color: white;
             border: none;
             padding: 6px 12px;
@@ -309,7 +326,7 @@
             font-size: 11px;
             font-weight: bold;
         }
-        .btn-ver:hover { background: #1557b0; }
+        .btn-ver:hover { filter: brightness(0.95); }
         
         .modal {
             display: none;
@@ -344,10 +361,10 @@
         .modal-title {
             font-size: 18px;
             font-weight: bold;
-            color: #1a73e8;
+            color: #0f766e;
             margin-bottom: 15px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #1a73e8;
+            border-bottom: 2px solid #0f766e;
         }
         .modal-field {
             padding: 8px 0;
@@ -630,6 +647,63 @@
         function formatNumber(num) {
             if (num === undefined || num === null) return '0';
             return Number(num).toLocaleString('es-CO');
+        }
+
+        function normalizarFechaLocal(valor) {
+            if (!valor) return null;
+
+            if (valor instanceof Date && !isNaN(valor.getTime())) {
+                return new Date(valor.getFullYear(), valor.getMonth(), valor.getDate());
+            }
+
+            const texto = valor.toString().trim();
+            if (!texto) return null;
+
+            const soloFecha = texto.split(' ')[0];
+            const patrones = [
+                /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
+                /^(\d{1,2})-(\d{1,2})-(\d{4})$/,
+                /^(\d{4})-(\d{1,2})-(\d{1,2})$/
+            ];
+
+            for (const patron of patrones) {
+                const coincidencia = soloFecha.match(patron);
+                if (!coincidencia) continue;
+
+                let dia;
+                let mes;
+                let anio;
+
+                if (patron === patrones[2]) {
+                    anio = Number(coincidencia[1]);
+                    mes = Number(coincidencia[2]);
+                    dia = Number(coincidencia[3]);
+                } else {
+                    dia = Number(coincidencia[1]);
+                    mes = Number(coincidencia[2]);
+                    anio = Number(coincidencia[3]);
+                }
+
+                const fecha = new Date(anio, mes - 1, dia);
+                if (!isNaN(fecha.getTime())) {
+                    return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+                }
+            }
+
+            const fechaParseada = new Date(texto);
+            if (!isNaN(fechaParseada.getTime())) {
+                return new Date(fechaParseada.getFullYear(), fechaParseada.getMonth(), fechaParseada.getDate());
+            }
+
+            return null;
+        }
+
+        function obtenerIndiceColumna(posiblesNombres) {
+            for (const nombre of posiblesNombres) {
+                const indice = headers.findIndex(col => (col || '').trim().toUpperCase() === nombre.trim().toUpperCase());
+                if (indice !== -1) return indice;
+            }
+            return -1;
         }
 
         function setRole(role) {
@@ -915,30 +989,23 @@
             const conductorUIndex = headers.indexOf('CONDUCTORU');
             const vehiculoIndex = headers.indexOf('VEHICULO');
             const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
-            const fechaIndex = headers.indexOf('FECHA E');
-            
-            function convertirFechaANumero(fecha) {
-                if (!fecha) return 0;
-                const partes = fecha.split('-');
-                if (partes.length !== 3) return 0;
-                return parseInt(partes[0] + partes[1] + partes[2]);
-            }
-            
-            function fechaSheetANumero(fechaSheet) {
-                if (!fechaSheet || fechaSheet.length < 10) return 0;
-                const partes = fechaSheet.split('/');
-                if (partes.length !== 3) return 0;
-                return parseInt(partes[2] + partes[1] + partes[0]);
-            }
+            const fechaIndex = headers.findIndex(col => {
+                const normalizada = (col || '').trim().toUpperCase();
+                return normalizada === 'FECHA E' || normalizada === 'FECHA ENTREGA';
+            });
+
+            const fechaDesdeNormalizada = normalizarFechaLocal(fechaDesde);
+            const fechaHastaNormalizada = normalizarFechaLocal(fechaHasta);
             
             ottFilteredData = ottData.filter(row => {
                 if (conductorFiltro && row[conductorUIndex] !== conductorFiltro) return false;
                 if (vehiculoFiltro && row[vehiculoIndex] !== vehiculoFiltro) return false;
                 if (estadoFiltro && row[estadoIndex] !== estadoFiltro) return false;
                 
-                const fechaRowNum = fechaSheetANumero(row[fechaIndex]);
-                if (fechaDesde && fechaRowNum < convertirFechaANumero(fechaDesde)) return false;
-                if (fechaHasta && fechaRowNum > convertirFechaANumero(fechaHasta)) return false;
+                const fechaFila = normalizarFechaLocal(fechaIndex !== -1 ? row[fechaIndex] : null);
+                if (!fechaFila) return false;
+                if (fechaDesdeNormalizada && fechaFila < fechaDesdeNormalizada) return false;
+                if (fechaHastaNormalizada && fechaFila > fechaHastaNormalizada) return false;
                 return true;
             });
             
@@ -1064,7 +1131,7 @@
             const productoIndex = headers.indexOf('PRODUCTO');
             const piezasIndex = headers.indexOf('# PIEZAS');
             const fbeIndex = headers.indexOf('FBE');
-            const fechaEIndex = headers.indexOf('FECHA E');
+            const fechaEIndex = obtenerIndiceColumna(['FECHA E', 'FECHA ENTREGA']);
             const conductorIndex = headers.indexOf('CONDUCTOR');
             const vehiculoIndex = headers.indexOf('VEHICULO');
             const ordenRIndex = headers.indexOf('ORDEN R');
@@ -1305,7 +1372,7 @@
             };
             
             const idIdx = getIndex('ID');
-            const fechaEIdx = getIndex('FECHA E');
+            const fechaEIdx = getIndex('FECHA E') !== null ? getIndex('FECHA E') : getIndex('FECHA ENTREGA');
             const origenIdx = getIndex('ORIGEN');
             const destinoIdx = getIndex('DESTINO');
             const productoIdx = getIndex('PRODUCTO');
@@ -1406,6 +1473,7 @@
             const row = data[rowIndex];
             const modalBody = document.getElementById('modalBody');
             
+            const indiceFechaEntrega = obtenerIndiceColumna(['FECHA E', 'FECHA ENTREGA']);
             const columnasMostrar = [
                 { nombre: 'ID', label: 'ID' },
                 { nombre: 'FECHA E', label: 'FECHA ENTREGA' },
@@ -1427,7 +1495,7 @@
             
             let html = '';
             columnasMostrar.forEach(col => {
-                const idx = headers.indexOf(col.nombre);
+                const idx = (col.nombre === 'FECHA E' || col.nombre === 'FECHA ENTREGA') ? indiceFechaEntrega : headers.indexOf(col.nombre);
                 if (idx !== -1 && row[idx] && row[idx].toString().trim() !== '') {
                     html += `
                         <div class="modal-field">
