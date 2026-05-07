@@ -506,7 +506,12 @@
             </div>
             
             <div class="subtotal-despacho">
-                <h4>📋 RESUMEN POR DESPACHO</h4>
+                <div style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:12px;">
+                    <h4>📋 RESUMEN POR DESPACHO</h4>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button id="downloadResumenOTTBtn" onclick="downloadResumenOTT()" style="padding:8px 12px; background:#10b981; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">⬇️ Descargar Excel</button>
+                    </div>
+                </div>
                 <div><span id="subtotalServiciosOTT">0</span> servicios | <span id="subtotalPiezasOTT">0</span> piezas | <span id="subtotalFBEOTT">0</span> FBE | <span id="subtotalTarifaOTT">$0</span></div>
             </div>
             <div class="table-wrapper">
@@ -598,6 +603,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         // ==================== CONFIGURACIÓN PROTEGIDA ====================
         // CAMBIA ESTA URL POR LA DE TU APPS SCRIPT
@@ -1209,7 +1215,42 @@
             container.innerHTML = html;
             window.ottDataModal = data;
         }
-        
+
+        // Exportar resumen OTT en formato .xlsx usando SheetJS
+        function downloadResumenOTT() {
+            const data = window.ottDataModal || ottFilteredData || [];
+            if (!data || data.length === 0) {
+                alert('No hay datos para exportar');
+                return;
+            }
+
+            if (typeof XLSX === 'undefined') {
+                alert('La librería de Excel no está cargada. Intenta recargar la página.');
+                return;
+            }
+
+            const columnas = ['ID','ORIGEN','DESTINO','FACTURAR A','PRODUCTO','# PIEZAS','FBE','FECHA E','CONDUCTOR','VEHICULO','ORDEN R','TARIFA','TIPO DE VIAJE','ESTADO DE VIAJE'];
+            const indices = columnas.map(col => col === 'FECHA E' ? obtenerIndiceColumna(['FECHA E','FECHA ENTREGA']) : headers.indexOf(col));
+
+            const aoa = [];
+            aoa.push(columnas);
+
+            data.forEach(row => {
+                const r = indices.map(idx => {
+                    return (idx !== -1 && idx !== null) ? (row[idx] || '') : '';
+                });
+                aoa.push(r);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Resumen');
+
+            const fecha = new Date().toISOString().slice(0,10);
+            const filename = `resumen_despacho_ott_${currentUser || 'OTT'}_${fecha}.xlsx`;
+            XLSX.writeFile(wb, filename);
+        }
+
         // ==================== FUNCIONES CONDUCTOR ====================
         function cargarListasCOND() {
             const vehiculoIndex = headers.indexOf('VEHICULO');
