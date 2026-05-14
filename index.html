@@ -140,6 +140,16 @@
             font-size: 13px;
             background: white;
         }
+        .filter-item select[multiple] {
+            min-height: 120px;
+            padding: 6px;
+        }
+        .filter-helper {
+            display: block;
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
         .date-range {
             display: flex;
             gap: 8px;
@@ -308,6 +318,15 @@
             text-align: center;
             border: 1px solid #ddd;
         }
+        .sortable-th {
+            cursor: pointer;
+            user-select: none;
+            touch-action: manipulation;
+            white-space: nowrap;
+        }
+        .sortable-th:hover {
+            filter: brightness(0.95);
+        }
         td {
             padding: 10px;
             border: 1px solid #ddd;
@@ -381,6 +400,34 @@
             width: 60%;
             color: #333;
         }
+
+        /* Popup nuevo servicio */
+        .new-service-notification-layer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: min(420px, calc(100vw - 40px));
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 99999;
+            pointer-events: none;
+        }
+        .new-service-popup {
+            position: relative;
+            width: 100%;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(2,6,23,0.2);
+            padding: 14px 16px;
+            pointer-events: auto;
+            animation: slideInService 0.35s ease;
+        }
+        .new-service-popup h4 { margin: 0 0 8px 0; color: #0f766e; font-size: 15px; }
+        .new-service-popup .ns-field { font-size: 13px; color: #111827; margin-bottom: 7px; line-height: 1.35; }
+        .new-service-popup .ns-close { position: absolute; right: 10px; top: 8px; cursor: pointer; color: #6b7280; font-size: 18px; line-height: 1; }
+        .new-service-popup .ns-close:hover { color: #111827; }
         
         @media (max-width: 768px) {
             th, td { font-size: 10px; padding: 6px; }
@@ -392,11 +439,9 @@
             .modal-field-label { width: 35%; font-size: 12px; }
             .modal-field-value { width: 65%; font-size: 12px; }
         }
-        @keyframes fadeInOut {
-        0% { opacity: 0; transform: translateX(20px); }
-        15% { opacity: 1; transform: translateX(0); }
-        85% { opacity: 1; transform: translateX(0); }
-        100% { opacity: 0; transform: translateX(20px); }
+        @keyframes slideInService {
+        0% { opacity: 0; transform: translateY(-10px) scale(0.98); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
     }
     </style>
 </head>
@@ -429,6 +474,15 @@
                     <span id="totalRegistrosOTT"></span>
                     <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
                 </div>
+            </div>
+            <!-- Botón Actualizar OTT con indicador de fecha/hora -->
+            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-bottom: 15px;">
+                <div id="ultimaActualizacionOTT" style="font-size: 11px; color: #666; background: #f0f0f0; padding: 6px 12px; border-radius: 20px;">
+                    📅 Última actualización: --
+                </div>
+                <button onclick="actualizarDatosOTT()" style="width: auto; padding: 8px 20px; background: #1a73e8; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                    🔄 ACTUALIZAR DATOS
+                </button>
             </div>
             
             <div class="filters-bar">
@@ -511,6 +565,17 @@
                     <div style="display:flex; gap:8px; align-items:center;">
                         <button id="downloadResumenOTTBtn" onclick="downloadResumenOTT()" style="padding:8px 12px; background:#10b981; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">⬇️ Descargar Excel</button>
                     </div>
+                </div>
+                <div style="margin-top:12px; max-width:360px; width:100%; position:relative;">
+                    <label style="display:block; font-size:11px; font-weight:700; color:#1a73e8; margin-bottom:4px; text-transform:uppercase;">🆔 ID (varios)</label>
+                    <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+                        <input id="filterIdInputOTT" placeholder="Escribe para buscar IDs..." style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px;" />
+                        <button id="filterIdToggleAll" onclick="toggleSelectAllIds()" style="padding:8px 10px; background:#1a73e8; color:white; border:none; border-radius:6px; cursor:pointer;">Seleccionar todo</button>
+                    </div>
+                    <div id="filterIdListOTT" style="max-height:160px; overflow:auto; border:1px solid #e5e7eb; border-radius:8px; background:white; padding:8px; display:none; position:absolute; z-index:1200; width:100%;"> 
+                        <!-- opciones con checkboxes -->
+                    </div>
+                    <small class="filter-helper">Escribe para filtrar, y usa el botón para seleccionar todos</small>
                 </div>
                 <div><span id="subtotalServiciosOTT">0</span> servicios | <span id="subtotalPiezasOTT">0</span> piezas | <span id="subtotalFBEOTT">0</span> FBE | <span id="subtotalTarifaOTT">$0</span></div>
             </div>
@@ -647,6 +712,7 @@
         let conductorData = [];
         let ottFilteredData = [];
         let conductorFilteredData = [];
+        let ottSortState = { column: 'ID', direction: 'asc' };
         
         const hoy = new Date().toISOString().split('T')[0];
         
@@ -710,6 +776,356 @@
                 if (indice !== -1) return indice;
             }
             return -1;
+        }
+
+        // Búsqueda más flexible: acepta nombres exactos, alias 'AA' solo para OBSERV, o encabezados que contengan la palabra 'OBSERV'
+        function obtenerIndiceFlexible(nombreBase) {
+            if (!nombreBase) return -1;
+            const raiz = nombreBase.toString().trim().toUpperCase();
+            
+            // 1) Buscar por coincidencia exacta
+            const exacto = obtenerIndiceColumna([nombreBase]);
+            if (exacto !== -1) return exacto;
+
+            // 2) Para campos especiales como OBSERVACIONES, buscar por alias 'AA' o contenga 'OBSERV'
+            if (raiz.includes('OBSERV')) {
+                // Primero busca encabezado que contenga 'OBSERV'
+                const idx = headers.findIndex(h => (h || '').toString().trim().toUpperCase().includes('OBSERV'));
+                if (idx !== -1) return idx;
+                // Si no encuentra, usa 'AA' como alias para OBSERVACIONES
+                const aaIdx = headers.findIndex(h => (h || '').toString().trim().toUpperCase() === 'AA');
+                if (aaIdx !== -1) return aaIdx;
+            }
+
+            return -1;
+        }
+
+        function obtenerValoresSeleccionados(selectId) {
+            const el = document.getElementById(selectId);
+            if (!el) return [];
+            // Si es un <select multiple>
+            if (el.tagName === 'SELECT') {
+                return Array.from(el.selectedOptions).map(option => option.value);
+            }
+            // Si es nuestro contenedor personalizado
+            const checkboxes = el.querySelectorAll('input[type="checkbox"][data-filter-id]');
+            return Array.from(checkboxes).filter(ch => ch.checked).map(ch => ch.getAttribute('data-filter-id'));
+        }
+
+        function cargarListaIdsOTT() {
+            const idIndex = headers.indexOf('ID');
+            const container = document.getElementById('filterIdListOTT');
+            const input = document.getElementById('filterIdInputOTT');
+            if (!container || !input || idIndex === -1) return;
+
+            const ids = [...new Set(ottData.map(row => row[idIndex]).filter(value => value !== undefined && value !== null && String(value).trim() !== ''))]
+                .sort((a, b) => String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' }));
+
+            container.innerHTML = '';
+            ids.forEach(id => {
+                const idStr = String(id).trim();
+                const div = document.createElement('div');
+                div.style.padding = '6px 4px';
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.gap = '8px';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.setAttribute('data-filter-id', idStr);
+                checkbox.id = 'filterId_cb_' + idStr;
+                checkbox.addEventListener('change', () => { aplicarFiltrosOTT(); });
+                const label = document.createElement('label');
+                label.htmlFor = checkbox.id;
+                label.style.cursor = 'pointer';
+                label.textContent = idStr;
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                container.appendChild(div);
+            });
+
+            // comportamiento: mostrar/ocultar lista al enfocar o escribir
+            input.addEventListener('focus', () => { container.style.display = 'block'; filterIdOptions(); });
+            input.addEventListener('input', () => { filterIdOptions(); container.style.display = 'block'; });
+            document.addEventListener('click', (e) => {
+                const target = e.target;
+                if (!container.contains(target) && target !== input && target.id !== 'filterIdToggleAll') {
+                    container.style.display = 'none';
+                }
+            });
+        }
+
+        function filterIdOptions() {
+            const container = document.getElementById('filterIdListOTT');
+            const input = document.getElementById('filterIdInputOTT');
+            if (!container || !input) return;
+            const q = input.value.trim().toLowerCase();
+            Array.from(container.children).forEach(div => {
+                const text = div.textContent.trim().toLowerCase();
+                div.style.display = text.includes(q) ? 'flex' : 'none';
+            });
+        }
+
+        function toggleSelectAllIds() {
+            const container = document.getElementById('filterIdListOTT');
+            if (!container) return;
+            const checkboxes = container.querySelectorAll('input[type="checkbox"][data-filter-id]');
+            const anyUnchecked = Array.from(checkboxes).some(cb => !cb.checked);
+            checkboxes.forEach(cb => cb.checked = anyUnchecked);
+            const btn = document.getElementById('filterIdToggleAll');
+            if (btn) btn.textContent = anyUnchecked ? 'Deseleccionar' : 'Seleccionar todo';
+            aplicarFiltrosOTT();
+        }
+
+        // ---------------- Novedades: detectar nuevos servicios ----------------
+        function _parseNumberIfPossible(v) {
+            if (v === undefined || v === null) return null;
+            // Remover espacios en blanco
+            let s = String(v).trim();
+            // Remover separadores de miles (puntos y comas)
+            // Mantener solo dígitos para IDs
+            s = s.replace(/[\s.,]/g, '');
+            const n = Number(s);
+            return Number.isFinite(n) ? n : null;
+        }
+
+        function _compareIds(a, b) {
+            const an = _parseNumberIfPossible(a);
+            const bn = _parseNumberIfPossible(b);
+            if (an !== null && bn !== null) return (an > bn) ? 1 : (an < bn ? -1 : 0);
+            const sa = String(a || '').trim();
+            const sb = String(b || '').trim();
+            return sa.localeCompare(sb, 'es', { numeric: true, sensitivity: 'base' });
+        }
+
+        function _getStoredMaxId(key) {
+            try { return localStorage.getItem(key); } catch (e) { return null; }
+        }
+
+        function _setStoredMaxId(key, value) {
+            try { localStorage.setItem(key, String(value)); } catch (e) { /* ignore */ }
+        }
+
+        let newServiceAudioContext = null;
+
+        function asegurarAudioNuevoServicio() {
+            if (newServiceAudioContext) return newServiceAudioContext;
+            const AudioCtor = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtor) return null;
+            newServiceAudioContext = new AudioCtor();
+            return newServiceAudioContext;
+        }
+
+        function reproducirSonidoNuevoServicio() {
+            try {
+                const audioContext = asegurarAudioNuevoServicio();
+                if (!audioContext) return;
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().catch(() => {});
+                }
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.14, audioContext.currentTime + 0.1);
+                gainNode.gain.exponentialRampToValueAtTime(0.09, audioContext.currentTime + 0.5);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 2);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 2);
+                oscillator.onended = () => {
+                    try { oscillator.disconnect(); gainNode.disconnect(); } catch (e) {}
+                };
+            } catch (e) {
+                console.error('No se pudo reproducir el sonido de nuevo servicio:', e);
+            }
+        }
+
+        function obtenerContenedorNotificacionesServicio() {
+            let layer = document.getElementById('newServiceNotificationLayer');
+            if (!layer) {
+                layer = document.createElement('div');
+                layer.id = 'newServiceNotificationLayer';
+                layer.className = 'new-service-notification-layer';
+                document.body.appendChild(layer);
+            }
+            return layer;
+        }
+
+        function obtenerValorFilaFlexible(row, nombres) {
+            if (!row || !Array.isArray(nombres)) return '-';
+            for (const nombre of nombres) {
+                const idx = obtenerIndiceFlexible(nombre);
+                if (idx !== -1) {
+                    const valor = row[idx];
+                    if (valor !== undefined && valor !== null && String(valor).trim() !== '') {
+                        return String(valor).trim();
+                    }
+                }
+            }
+            return '-';
+        }
+
+        function checkNewServices(rows, role) {
+            if (!rows || rows.length === 0) return;
+            const idIdx = headers.indexOf('ID');
+            if (idIdx === -1) return;
+
+            const storageKey = `maxId_${role}_${currentUser || 'anon'}`;
+
+            // determinar max actual
+            let currentMax = null;
+            rows.forEach(r => {
+                const v = r[idIdx];
+                if (v === undefined || v === null) return;
+                if (currentMax === null || _compareIds(v, currentMax) > 0) currentMax = v;
+            });
+            if (currentMax === null) return;
+
+            const stored = _getStoredMaxId(storageKey);
+            
+            // DEBUG: Mostrar información en consola
+            console.log(`%c🔍 Notificaciones - ${role} (${currentUser || 'anon'})`, 'color: #1a73e8; font-weight: bold; font-size: 12px;');
+            console.log(`   📊 ID Máximo Actual: ${currentMax}`);
+            console.log(`   📦 ID Guardado (último procesado): ${stored || 'NINGUNO (primera vez)'}`);
+            
+            if (stored === null) {
+                // primera vez: guardar y no notificar
+                console.log(`   ✅ Primera ejecución - Guardando como referencia`);
+                _setStoredMaxId(storageKey, currentMax);
+                return;
+            }
+
+            // encontrar filas nuevas (id > stored)
+            const nuevos = rows.filter(r => {
+                const v = r[idIdx];
+                if (v === undefined || v === null) return false;
+                return _compareIds(v, stored) > 0;
+            });
+
+            console.log(`   🆕 Nuevos servicios encontrados: ${nuevos.length}`);
+            if (nuevos.length > 0) {
+                const nuevosIds = nuevos.map(r => r[idIdx]).join(', ');
+                console.log(`   📋 IDs nuevos: [${nuevosIds}]`);
+            }
+
+            if (nuevos.length === 0) {
+                // actualizar stored si currentMax es mayor
+                if (_compareIds(currentMax, stored) > 0) _setStoredMaxId(storageKey, currentMax);
+                console.log(`   ℹ️ Sin cambios nuevos`);
+                return;
+            }
+
+            // ordenar por ID asc
+            nuevos.sort((a, b) => _compareIds(a[idIdx], b[idIdx]));
+
+            reproducirSonidoNuevoServicio();
+
+            nuevos.forEach(row => showNewServicePopup(row, { storageKey, storedMax: stored, currentMax }));
+
+            // guardar nuevo max
+            _setStoredMaxId(storageKey, currentMax);
+        }
+
+        function showNewServicePopup(row, contexto = {}) {
+            const fecha = obtenerValorFilaFlexible(row, ['FECHA E', 'FECHA ENTREGA']);
+            const idServicio = obtenerValorFilaFlexible(row, ['ID']);
+            const idAnterior = contexto.storedMax !== undefined ? String(contexto.storedMax) : '-';
+            const idActual = contexto.currentMax !== undefined ? String(contexto.currentMax) : idServicio;
+            const origen = obtenerValorFilaFlexible(row, ['ORIGEN']);
+            const destino = obtenerValorFilaFlexible(row, ['DESTINO']);
+            const horaC = obtenerValorFilaFlexible(row, ['HORA C']);
+            const horaD = obtenerValorFilaFlexible(row, ['HORA D']);
+            const zona = obtenerValorFilaFlexible(row, ['ZONA ENTREGA', 'ZONA']);
+            const conductor = obtenerValorFilaFlexible(row, ['CONDUCTORU', 'CONDUCTOR']);
+            const vehiculo = obtenerValorFilaFlexible(row, ['VEHICULO']);
+            const estado = obtenerValorFilaFlexible(row, ['ESTADO DE VIAJE', 'ESTADO']);
+            const usuarioLogeado = currentUser || '-';
+
+            const popup = document.createElement('div');
+            popup.className = 'new-service-popup';
+
+            popup.innerHTML = `
+                <span class="ns-close" onclick="this.parentElement.remove()">&times;</span>
+                <h4>🆕 ID ${idActual}</h4>
+                <div class="ns-field"><strong>Fecha entrega:</strong> ${fecha}</div>
+                <div class="ns-field"><strong>Origen:</strong> ${origen}</div>
+                <div class="ns-field"><strong>Destino:</strong> ${destino}</div>
+                <div class="ns-field"><strong>Conductor:</strong> ${conductor}</div>
+                <div class="ns-field"><strong>Vehículo:</strong> ${vehiculo}</div>
+                <div class="ns-field"><strong>Estado:</strong> ${estado}</div>
+                <div class="ns-field"><strong>Hora C:</strong> ${horaC}  <strong style="margin-left:8px;">Hora D:</strong> ${horaD}</div>
+                <div class="ns-field"><strong>Zona entrega:</strong> ${zona}</div>
+            `;
+
+            const layer = obtenerContenedorNotificacionesServicio();
+            layer.appendChild(popup);
+            setTimeout(() => { try { popup.remove(); } catch (e) {} }, 30000);
+        }
+
+        function obtenerValorOrdenableOTT(row, sortColumn) {
+            if (!row || !sortColumn) return '';
+
+            const normalizado = sortColumn.toUpperCase();
+            let idx = -1;
+
+            if (normalizado === 'FECHA ENTREGA') {
+                idx = obtenerIndiceColumna(['FECHA E', 'FECHA ENTREGA']);
+            } else {
+                idx = headers.findIndex(col => (col || '').trim().toUpperCase() === normalizado);
+            }
+
+            if (idx === -1) return '';
+
+            const valor = row[idx];
+            if (valor === undefined || valor === null) return '';
+
+            const texto = String(valor).trim();
+            if (!texto) return '';
+
+            if (normalizado === 'ID' || normalizado === '# PIEZAS' || normalizado === 'FBE' || normalizado === 'TARIFA') {
+                const numero = Number(texto.replace(/[^0-9,.-]/g, '').replace(/\./g, '').replace(',', '.'));
+                return Number.isNaN(numero) ? texto : numero;
+            }
+
+            if (normalizado.includes('FECHA')) {
+                const fecha = normalizarFechaLocal(texto);
+                return fecha ? fecha.getTime() : texto;
+            }
+
+            return texto.toUpperCase();
+        }
+
+        function ordenarDatosOTT(data) {
+            const factor = ottSortState.direction === 'asc' ? 1 : -1;
+            return [...data].sort((a, b) => {
+                const valorA = obtenerValorOrdenableOTT(a, ottSortState.column);
+                const valorB = obtenerValorOrdenableOTT(b, ottSortState.column);
+
+                const aVacio = valorA === '' || valorA === null || valorA === undefined;
+                const bVacio = valorB === '' || valorB === null || valorB === undefined;
+                if (aVacio && bVacio) return 0;
+                if (aVacio) return 1;
+                if (bVacio) return -1;
+
+                if (typeof valorA === 'number' && typeof valorB === 'number') {
+                    return (valorA - valorB) * factor;
+                }
+
+                return String(valorA).localeCompare(String(valorB), 'es', { numeric: true, sensitivity: 'base' }) * factor;
+            });
+        }
+
+        function ordenarTablaOTT(columna) {
+            if (!columna) return;
+            if (ottSortState.column === columna) {
+                ottSortState.direction = ottSortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                ottSortState.column = columna;
+                ottSortState.direction = 'asc';
+            }
+            renderTableOTT(ottFilteredData);
         }
 
         function setRole(role) {
@@ -914,6 +1330,20 @@
                 document.getElementById('loginPanel').style.display = 'none';
                 document.getElementById('dashboardPanelOTT').style.display = 'block';
                 document.getElementById('userDisplayOTT').innerText = `OTT: ${username}`;
+                // Agregar fecha/hora inicial al dashboard de OTT
+                const ahoraOtt = new Date();
+                const fechaHoraOtt = ahoraOtt.toLocaleString('es-CO', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                const updateDivOtt = document.getElementById('ultimaActualizacionOTT');
+                if (updateDivOtt) {
+                    updateDivOtt.innerHTML = `📅 Última actualización: ${fechaHoraOtt}`;
+                }
                 
             } else {
                 if (conductorUIndex === -1) {
@@ -983,15 +1413,19 @@
             estados.forEach(e => {
                 selectEstado.innerHTML += `<option value="${e}">${e}</option>`;
             });
+
+            cargarListaIdsOTT();
         }
         
         function aplicarFiltrosOTT() {
+            const idsSeleccionados = obtenerValoresSeleccionados('filterIdListOTT');
             const conductorFiltro = document.getElementById('filterConductorOTT').value;
             const vehiculoFiltro = document.getElementById('filterVehiculoOTT').value;
             const estadoFiltro = document.getElementById('filterEstadoOTT').value;
             const fechaDesde = document.getElementById('filterFechaDesdeOTT').value;
             const fechaHasta = document.getElementById('filterFechaHastaOTT').value;
             
+            const idIndex = headers.indexOf('ID');
             const conductorUIndex = headers.indexOf('CONDUCTORU');
             const vehiculoIndex = headers.indexOf('VEHICULO');
             const estadoIndex = headers.indexOf('ESTADO DE VIAJE');
@@ -1004,6 +1438,10 @@
             const fechaHastaNormalizada = normalizarFechaLocal(fechaHasta);
             
             ottFilteredData = ottData.filter(row => {
+                if (idsSeleccionados.length > 0) {
+                    const idFila = idIndex !== -1 ? String(row[idIndex] || '').trim() : '';
+                    if (!idsSeleccionados.includes(idFila)) return false;
+                }
                 if (conductorFiltro && row[conductorUIndex] !== conductorFiltro) return false;
                 if (vehiculoFiltro && row[vehiculoIndex] !== vehiculoFiltro) return false;
                 if (estadoFiltro && row[estadoIndex] !== estadoFiltro) return false;
@@ -1019,6 +1457,11 @@
         }
         
         function limpiarFiltrosOTT() {
+            const container = document.getElementById('filterIdListOTT');
+            if (container) {
+                const checkboxes = container.querySelectorAll('input[type="checkbox"][data-filter-id]');
+                checkboxes.forEach(cb => cb.checked = false);
+            }
             document.getElementById('filterConductorOTT').value = '';
             document.getElementById('filterVehiculoOTT').value = '';
             document.getElementById('filterEstadoOTT').value = '';
@@ -1129,6 +1572,8 @@
                 container.innerHTML = '<div class="loading">🔍 No hay servicios que coincidan con los filtros</div>';
                 return;
             }
+
+            const dataOrdenada = ordenarDatosOTT(data);
             
             const idIndex = headers.indexOf('ID');
             const origenIndex = headers.indexOf('ORIGEN');
@@ -1149,24 +1594,32 @@
             html += '<table style="width: 100%; border-collapse: collapse; min-width: 1200px; font-size: 12px;">';
             html += '<thead><tr>';
             html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">VER</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ID</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ORIGEN</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">DESTINO</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">FACTURAR A</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">PRODUCTO</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;"># PIEZAS</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">FBE</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">FECHA ENTREGA</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">CONDUCTOR</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">VEHICULO</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ORDEN DE RECORRIDO</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">TARIFA</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">TIPO VIAJE</th>';
-            html += '<th style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">ESTADO</th>';
+
+            const encabezadosOTT = [
+                { label: 'ID', key: 'ID' },
+                { label: 'ORIGEN', key: 'ORIGEN' },
+                { label: 'DESTINO', key: 'DESTINO' },
+                { label: 'FACTURAR A', key: 'FACTURAR A' },
+                { label: 'PRODUCTO', key: 'PRODUCTO' },
+                { label: '# PIEZAS', key: '# PIEZAS' },
+                { label: 'FBE', key: 'FBE' },
+                { label: 'FECHA ENTREGA', key: 'FECHA ENTREGA' },
+                { label: 'CONDUCTOR', key: 'CONDUCTOR' },
+                { label: 'VEHICULO', key: 'VEHICULO' },
+                { label: 'ORDEN DE RECORRIDO', key: 'ORDEN R' },
+                { label: 'TARIFA', key: 'TARIFA' },
+                { label: 'TIPO VIAJE', key: 'TIPO DE VIAJE' },
+                { label: 'ESTADO', key: 'ESTADO DE VIAJE' }
+            ];
+
+            encabezadosOTT.forEach(col => {
+                const marcador = ottSortState.column === col.key ? (ottSortState.direction === 'asc' ? ' ▲' : ' ▼') : '';
+                html += `<th class="sortable-th" onclick="ordenarTablaOTT('${col.key}')" style="background: #1a73e8; color: white; padding: 10px 6px; border: 1px solid #ddd;">${col.label}${marcador}</th>`;
+            });
             html += '</tr></thead><tbody>';
             
-            for (let i = 0; i < data.length; i++) {
-                const row = data[i];
+            for (let i = 0; i < dataOrdenada.length; i++) {
+                const row = dataOrdenada[i];
                 
                 const getVal = (idx) => {
                     if (idx === -1) return '-';
@@ -1213,7 +1666,7 @@
             
             html += '</tbody></table></div>';
             container.innerHTML = html;
-            window.ottDataModal = data;
+            window.ottDataModal = dataOrdenada;
         }
 
         // Exportar resumen OTT en formato .xlsx usando SheetJS
@@ -1537,12 +1990,23 @@
             
             let html = '';
             columnasMostrar.forEach(col => {
-                const idx = (col.nombre === 'FECHA E' || col.nombre === 'FECHA ENTREGA') ? indiceFechaEntrega : headers.indexOf(col.nombre);
-                if (idx !== -1 && row[idx] && row[idx].toString().trim() !== '') {
+                const idx = (col.nombre === 'FECHA E' || col.nombre === 'FECHA ENTREGA') ? indiceFechaEntrega : obtenerIndiceFlexible(col.nombre);
+                const idxObserv = obtenerIndiceFlexible('OBSERVACIONES');
+
+                if (idx === -1) return;
+
+                let valor = row[idx];
+                const tieneValor = valor !== undefined && valor !== null && valor.toString().trim() !== '';
+
+                if (idx === idxObserv) {
+                    valor = tieneValor ? valor.toString().replace(/\n/g, ' ').replace(/\r/g, ' ') : '';
+                }
+
+                if (tieneValor || idx === idxObserv) {
                     html += `
                         <div class="modal-field">
                             <div class="modal-field-label">${col.label}:</div>
-                            <div class="modal-field-value">${row[idx]}</div>
+                            <div class="modal-field-value">${tieneValor ? valor : '&nbsp;'}</div>
                         </div>
                     `;
                 }
@@ -1566,7 +2030,7 @@
         }
 
         // ==================== FUNCIÓN ACTUALIZAR DATOS CONDUCTOR ====================
-        async function actualizarDatosConductor() {
+        async function actualizarDatosConductor(isAuto = false) {
             const btnActualizar = document.querySelector('#dashboardPanelCONDUCTOR button[onclick="actualizarDatosConductor()"]');
             const textoOriginal = btnActualizar.innerHTML;
             btnActualizar.innerHTML = '⏳ Actualizando...';
@@ -1581,23 +2045,28 @@
                 const conductorNombreIndex = headers.indexOf('CONDUCTOR');
                 
                 if (conductorUIndex === -1) {
-                    alert('No se encontró columna CONDUCTORU');
+                    if (!isAuto) alert('No se encontró columna CONDUCTORU');
                     return;
                 }
                 
                 // Filtrar datos para el conductor actual
                 conductorData = rows.filter(row => (row[conductorUIndex] || '').trim().toUpperCase() === currentUser);
-                
+                // detectar nuevos servicios para conductor
+                try { checkNewServices(conductorData, 'CONDUCTOR'); } catch (e) { console.error(e); }
+
                 if (conductorData.length === 0) {
-                    alert(`No hay servicios para el conductor ${currentUser}`);
+                    if (!isAuto) alert(`No hay servicios para el conductor ${currentUser}`);
                     return;
                 }
                 
                 // Recargar listas de filtros
                 cargarListasCOND();
-                
+
                 // Re-aplicar filtros actuales
                 aplicarFiltrosCOND();
+
+                // detectar nuevos servicios para conductor
+                try { checkNewServices(conductorData, 'CONDUCTOR'); } catch (e) { console.error(e); }
                 
                 // Actualizar fecha y hora de la última actualización
                 const ahora = new Date();
@@ -1615,21 +2084,86 @@
                     updateDiv.innerHTML = `📅 Última actualización: ${fechaHora}`;
                 }
                 
-                // Mostrar mensaje de éxito
-                const toast = document.createElement('div');
-                toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#28a745;color:white;padding:12px 20px;border-radius:8px;z-index:9999;animation:fadeInOut 2s ease';
-                toast.innerHTML = '✅ Datos actualizados correctamente';
-                document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 2000);
+                if (!isAuto) {
+                    const toast = document.createElement('div');
+                    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#28a745;color:white;padding:12px 20px;border-radius:8px;z-index:9999;animation:fadeInOut 2s ease';
+                    toast.innerHTML = '✅ Datos actualizados correctamente';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
+                }
                 
             } catch (error) {
                 console.error('Error actualizando datos:', error);
-                alert('❌ Error al actualizar los datos: ' + error.message);
+                if (!isAuto) alert('❌ Error al actualizar los datos: ' + error.message);
             } finally {
                 btnActualizar.innerHTML = textoOriginal;
                 btnActualizar.disabled = false;
             }
         }
+
+        // ==================== FUNCIÓN ACTUALIZAR DATOS OTT ====================
+        async function actualizarDatosOTT(isAuto = false) {
+            const btnActualizar = document.querySelector('#dashboardPanelOTT button[onclick="actualizarDatosOTT()"]');
+            const textoOriginal = btnActualizar ? btnActualizar.innerHTML : null;
+            if (btnActualizar) { btnActualizar.innerHTML = '⏳ Actualizando...'; btnActualizar.disabled = true; }
+
+            try {
+                const { headers: allHeaders, rows } = await loadDatos();
+                headers = allHeaders;
+
+                const ottIndex = headers.indexOf('OTT');
+                if (ottIndex === -1) {
+                    // no mostrar alerta para no molestar en auto-refresh
+                    return;
+                }
+
+                ottData = rows.filter(row => (row[ottIndex] || '').trim().toUpperCase() === currentUser);
+
+                // detectar nuevos servicios para OTT
+                try { checkNewServices(ottData, 'OTT'); } catch (e) { console.error(e); }
+
+                if (!ottData || ottData.length === 0) {
+                    // no mostrar alerta en auto-refresh
+                    return;
+                }
+
+                // Recargar listas y filtros
+                cargarListasOTT();
+                aplicarFiltrosOTT();
+
+                const ahora = new Date();
+                const fechaHora = ahora.toLocaleString('es-CO', {
+                    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+                const updateDiv = document.getElementById('ultimaActualizacionOTT');
+                if (updateDiv) updateDiv.innerHTML = `📅 Última actualización: ${fechaHora}`;
+
+                // Mostrar toast solo si es una acción manual (botón presente)
+                if (textoOriginal !== null && !isAuto) {
+                    const toast = document.createElement('div');
+                    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#28a745;color:white;padding:12px 20px;border-radius:8px;z-index:9999;animation:fadeInOut 2s ease';
+                    toast.innerHTML = '✅ Datos actualizados correctamente';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
+                }
+
+            } catch (error) {
+                console.error('Error actualizando datos OTT:', error);
+                if (!isAuto) {
+                    // mostrar alerta solo si es actualización manual
+                    alert('❌ Error actualizando datos OTT: ' + (error && error.message ? error.message : error));
+                }
+            } finally {
+                if (btnActualizar) { btnActualizar.innerHTML = textoOriginal; btnActualizar.disabled = false; }
+            }
+        }
+
+        // Auto-refresh cada 60 segundos
+        const AUTO_REFRESH_INTERVAL = 60000;
+        setInterval(() => {
+            try { actualizarDatosOTT(true); } catch (e) { console.error(e); }
+            try { actualizarDatosConductor(true); } catch (e) { console.error(e); }
+        }, AUTO_REFRESH_INTERVAL);
 
         // ==================== EVENT LISTENERS ====================
         document.getElementById('userInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') login(); });
